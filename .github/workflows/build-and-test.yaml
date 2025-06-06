@@ -98,7 +98,7 @@ jobs:
       - name: Generate matrix list
         id: suites
         run: |
-          list="$(charmcraft test --list github-ci | sed "s|github-ci:ubuntu-24.04:tests/spread/functional/||g" | jq -r -ncR '[inputs | select(length>0)]')"
+          list="$(charmcraft test --list github-ci:ubuntu-24.04:tests/spread/functional/ | sed "s|github-ci:ubuntu-24.04:tests/spread/functional/||g" | jq -r -ncR '[inputs | select(length>0)]')"
           echo "suites=$list"
           echo "suites=$list" >> $GITHUB_OUTPUT
 
@@ -151,7 +151,7 @@ jobs:
       - name: Generate matrix list
         id: suites
         run: |
-          list="$(charmcraft test --list github-ci | sed "s|github-ci:ubuntu-24.04:tests/spread/integration/||g" | jq -r -ncR '[inputs | select(length>0)]')"
+          list="$(charmcraft test --list github-ci:ubuntu-24.04:tests/spread/integration/ | sed "s|github-ci:ubuntu-24.04:tests/spread/integration/||g" | jq -r -ncR '[inputs | select(length>0)]')"
           echo "suites=$list"
           echo "suites=$list" >> $GITHUB_OUTPUT
 
