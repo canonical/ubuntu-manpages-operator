@@ -32,13 +32,17 @@ def test_build_config_successful(manpages):
         "questing": "25.10",
     }
 
-    config = manpages._build_config("questing, plucky, oracular, noble, jammy")
+    config = manpages._build_config(
+        "questing, plucky, oracular, noble, jammy", "http://manpages.ubuntu.com"
+    )
     assert config == cfg
 
 
 def test_build_config_unknown_release(manpages):
     try:
-        manpages._build_config("foobar, plucky, oracular, noble, jammy")
+        manpages._build_config(
+            "foobar, plucky, oracular, noble, jammy", "http://manpages.ubuntu.com"
+        )
     except Exception as e:
         assert isinstance(e, ValueError)
         assert str(e) == "failed to build manpages config: release 'foobar' not found on Launchpad"
@@ -46,7 +50,7 @@ def test_build_config_unknown_release(manpages):
 
 def test_build_config_invalid_release(manpages):
     try:
-        manpages._build_config("!!!!!!!!")
+        manpages._build_config("!!!!!!!!", "http://manpages.ubuntu.com")
     except Exception as e:
         assert isinstance(e, ValueError)
         assert str(e) == "failed to build manpages config: invalid releases specified"

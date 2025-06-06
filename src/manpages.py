@@ -109,10 +109,10 @@ class Manpages:
                 except FileNotFoundError:
                     logger.debug("failed to change ownership of '%s'", path)
 
-    def configure(self, releases: str):
+    def configure(self, releases: str, url: str):
         """Configure the manpages service."""
         try:
-            config = self._build_config(releases)
+            config = self._build_config(releases, url)
         except ValueError as e:
             logger.error("failed to build manpages configuration: invalid releases spec: %s", e)
             raise
@@ -160,13 +160,14 @@ class Manpages:
         """Report whether the manpages are currently being updated."""
         return service_running("update-manpages")
 
-    def _build_config(self, releases: str) -> ManpagesConfig:
+    def _build_config(self, releases: str, url: str) -> ManpagesConfig:
         """Build a ManpagesConfig object using a set of specified release codenames."""
         releases_list = RELEASES_PATTERN.findall(releases)
         if not releases_list:
             raise ValueError("failed to build manpages config: invalid releases specified")
 
         config = ManpagesConfig()
+        config.site = url
 
         # Get the release map for the specified release codenames.
         try:

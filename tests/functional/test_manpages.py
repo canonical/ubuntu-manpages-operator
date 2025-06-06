@@ -62,7 +62,7 @@ def test_install_manpages(manpages):
 
 def test_configure_manpages(manpages):
     releases = "questing, plucky, oracular, noble, jammy"
-    manpages.configure(releases)
+    manpages.configure(releases, "http://foo.bar")
 
     assert CONFIG_PATH.exists()
 
@@ -74,6 +74,7 @@ def test_configure_manpages(manpages):
         "plucky": "25.04",
         "questing": "25.10",
     }
+    cfg.site = "http://foo.bar"
 
     with open(CONFIG_PATH, "r") as f:
         content = json.load(f)
@@ -83,7 +84,7 @@ def test_configure_manpages(manpages):
 def test_configure_manpages_bad_codename(manpages):
     releases = "foobar, plucky, oracular, noble, jammy"
     try:
-        manpages.configure(releases)
+        manpages.configure(releases, "http://foo.bar")
     except Exception as e:
         assert isinstance(e, ValueError)
 
@@ -108,7 +109,7 @@ def test_purge_unused_manpages(manpages):
 
     # Reconfigure to only keep one release.
     releases = "questing"
-    manpages.configure(releases)
+    manpages.configure(releases, "http://foo.bar")
     manpages.purge_unused_manpages()
 
     # Ensure the purged releases have been removed from disk.

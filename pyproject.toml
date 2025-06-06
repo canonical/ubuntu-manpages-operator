@@ -3,7 +3,7 @@ name = "ubuntu-manpages-operator"
 version = "0.1.0"
 requires-python = ">=3.8"
 
-dependencies = ["ops", "launchpadlib"]
+dependencies = ["ops", "launchpadlib", "pydantic"]
 
 [project.optional-dependencies]
 dev = [

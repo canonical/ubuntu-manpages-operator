@@ -44,6 +44,8 @@ charm-libs:
     version: "0"
   - lib: operator_libs_linux.systemd
     version: "1"
+  - lib: traefik_k8s.ingress
+    version: "2"
 
 config:
   options:
@@ -67,3 +69,8 @@ storage:
   manpages-gz:
     type: filesystem
     location: /app/www/manpages.gz
+
+requires:
+  ingress:
+    interface: ingress
+    limit: 1

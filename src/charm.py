@@ -5,15 +5,19 @@
 """Charmed Operator for manpages.ubuntu.com."""
 
 import logging
+import socket
 from subprocess import CalledProcessError
 
 import ops
 from charms.operator_libs_linux.v0.apt import PackageError, PackageNotFoundError
+from charms.traefik_k8s.v2.ingress import IngressPerAppRequirer as IngressRequirer
 
 from launchpad import LaunchpadClient
 from manpages import Manpages
 
 logger = logging.getLogger(__name__)
+
+PORT = 8080
 
 
 class ManpagesCharm(ops.CharmBase):
@@ -21,12 +25,19 @@ class ManpagesCharm(ops.CharmBase):
 
     def __init__(self, *args):
         super().__init__(*args)
+        self.ingress = IngressRequirer(self, port=PORT, strip_prefix=True, relation_name="ingress")
+
         self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.start, self._on_start)
         self.framework.observe(self.on.upgrade_charm, self._on_install)
         self.framework.observe(self.on.update_status, self._on_update_status)
         self.framework.observe(self.on.update_manpages_action, self._on_config_changed)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
+
+        # Ingress URL changes require updating the configuration and also regenerating sitemaps,
+        # therefore we can bind events for this relation to the config_changed event.
+        self.framework.observe(self.on.ingress_relation_changed, self._on_config_changed)
+        self.framework.observe(self.on.ingress_relation_departed, self._on_config_changed)
 
         self._manpages = Manpages(LaunchpadClient())
 
@@ -45,7 +56,7 @@ class ManpagesCharm(ops.CharmBase):
         """Update configuration and fetch relevant manpages."""
         self.unit.status = ops.MaintenanceStatus("Updating configuration")
         try:
-            self._manpages.configure(self.config["releases"])
+            self._manpages.configure(self.config["releases"], self._get_external_url())
         except ValueError:
             self.unit.status = ops.BlockedStatus(
                 "Invalid configuration. Check `juju debug-log` for details."
@@ -72,7 +83,7 @@ class ManpagesCharm(ops.CharmBase):
             )
             return
 
-        self.unit.set_ports(8080)
+        self.unit.set_ports(PORT)
 
         if self._manpages.updating:
             self.unit.status = ops.MaintenanceStatus("Updating manpages")
@@ -85,6 +96,19 @@ class ManpagesCharm(ops.CharmBase):
             self.unit.status = ops.MaintenanceStatus("Updating manpages")
         else:
             self.unit.status = ops.ActiveStatus()
+
+    def _get_external_url(self) -> str:
+        """Report URL to access Ubuntu Manpages."""
+        # Default: FQDN
+        external_url = f"http://{socket.getfqdn()}:{PORT}"
+        # If can connect to juju-info, get unit IP
+        if binding := self.model.get_binding("juju-info"):
+            unit_ip = str(binding.network.bind_address)
+            external_url = f"http://{unit_ip}:{PORT}"
+        # If ingress is set, get ingress url
+        if self.ingress.url:
+            external_url = self.ingress.url
+        return external_url
 
 
 if __name__ == "__main__":  # pragma: nocover
