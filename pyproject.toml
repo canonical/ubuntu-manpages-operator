@@ -1,5 +1,5 @@
 [project]
-name = "manpages-k8s-operator"
+name = "ubuntu-manpages-operator"
 version = "0.1.0"
 requires-python = ">=3.8"
 
