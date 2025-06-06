@@ -71,8 +71,8 @@ suites:
 
       pushd "$SPREAD_PATH"
 
-      if [[ -f "$PWD/manpages_amd64.charm" ]]; then
-        chown $(id -u):$(id -g) $PWD/manpages_amd64.charm
+      if [[ -f "$PWD/ubuntu-manpages_amd64.charm" ]]; then
+        chown $(id -u):$(id -g) $PWD/ubuntu-manpages_amd64.charm
       fi
     restore-each: |
       if [[ -z "${CI:-}" ]]; then
