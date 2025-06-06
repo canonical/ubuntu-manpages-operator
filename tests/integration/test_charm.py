@@ -23,7 +23,7 @@ def address(juju: jubilant.Juju):
 
 
 def test_deploy(juju: jubilant.Juju, manpages_charm):
-    juju.deploy(manpages_charm, app=MANPAGES, config={"releases": "plucky"})
+    juju.deploy(manpages_charm, app=MANPAGES, config={"releases": "noble"})
     juju.wait(wait_func)
 
 
@@ -35,5 +35,5 @@ def test_application_is_up(juju: jubilant.Juju):
 
 @retry(retry_num=10, retry_sleep_sec=3)
 def test_application_is_downloading_manpages(juju: jubilant.Juju):
-    response = urlopen(f"http://{address(juju)}:8080/manpages/plucky/")
+    response = urlopen(f"http://{address(juju)}:8080/manpages/noble/")
     assert response.status == 200
