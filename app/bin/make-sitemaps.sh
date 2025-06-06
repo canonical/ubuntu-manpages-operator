@@ -34,7 +34,7 @@ if [[ -z "$CONFIG" ]]; then
 fi
 
 PUBLIC_HTML_DIR="$(jq -r '.public_html_dir' "$CONFIG")"
-PUBLIC_HTML_DIR="$(jq -r '.site' "$CONFIG")"
+SITE="$(jq -r '.site' "$CONFIG")"
 
 printf "%s\n" "INFO: Making sitemaps"
 
