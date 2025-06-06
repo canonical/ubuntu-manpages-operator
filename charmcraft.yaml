@@ -2,14 +2,22 @@
 # See LICENSE file for licensing details.
 name: ubuntu-manpages
 description: |
-  Ubuntu Manpages is a site which contains thousands of dynamically
-  generated manuals, extracted from every support version of
-  Ubuntu and updated on a regular basis.
-
-  See the deployed application at https://manpages.ubuntu.com.
-
+  **Ubuntu Manpages Operator** is a [charm](https://juju.is/charms-architecture)
+  for deploying [https://manpages.ubuntu.com](https://manpages.ubuntu.com),
+  a site which contains thousands of dynamically generated manuals, extracted
+  from every supported version of Ubuntu and updated on a regular basis.
 summary: |
   A charm for deploying the online Ubuntu manpage archive.
+
+links:
+  documentation: https://discourse.charmhub.io/t/ubuntu-manpages-documentation/17965
+  website:
+    - https://manpages.ubuntu.com
+    - https://charmhub.io/ubuntu-manpages
+  issues:
+    - https://github.com/canonical/ubuntu-manpages-operator/issues
+  source:
+    - https://github.com/canonical/ubuntu-manpages-operator
 
 type: charm
 base: ubuntu@24.04

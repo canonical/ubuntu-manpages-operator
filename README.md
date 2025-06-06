@@ -52,6 +52,26 @@ To update the manpages, you can use the provided Juju [Action](https://documenta
 ❯ juju run ubuntu-manpages/0 update-manpages
 ```
 
+## Integrating with an ingress / proxy
+
+The charm supports integrations with ingress/proxy services using the `ingress` relation. To test this:
+
+```bash
+# Deploy the charms
+❯ juju deploy ubuntu-manpages
+❯ juju deploy haproxy --channel 2.8/edge --config external-hostname=manpages.internal
+❯ juju deploy self-signed-certificates --channel 1/edge
+
+# Create integrations
+❯ juju integrate ubuntu-manpages haproxy
+❯ juju integrate self-signed-certificates haproxy
+
+# Test the proxy integration
+❯ curl -k -H "Host: manpages.internal" https://<haproxy-ip>/<model-name>-ubuntu-manpages
+```
+
+The scenario described above is demonstrated [in the integration tests](./tests/integration/test_ingress.py).
+
 ## Contribute to Ubuntu Manpages Operator
 
 Ubuntu Manpages Operator is open source and part of the Canonical family. We would love your help.
