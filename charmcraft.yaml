@@ -31,6 +31,14 @@ parts:
       www: app/www
       config: app/config
 
+  files:
+    plugin: dump
+    source: .
+    stage:
+      - LICENSE
+      - README.md
+      - icon.svg
+
 charm-libs:
   - lib: operator_libs_linux.apt
     version: "0"
