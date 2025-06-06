@@ -151,7 +151,7 @@ jobs:
 
   integration-test:
     name: Integration Tests - (${{ matrix.suite }})
-    runs-on: ubuntu-24.04
+    runs-on: [self-hosted, large, noble]
     needs:
       - define-integration-matrix
       - lib-check

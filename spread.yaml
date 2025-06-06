@@ -102,10 +102,3 @@ exclude:
 # as root, which means that juju can only see files in root's
 # home directory due to snap confinement.
 path: /root/proj
-
-prepare: |
-  snap refresh --hold
-  if systemctl is-enabled unattended-upgrades.service; then
-    systemctl stop unattended-upgrades.service
-    systemctl mask unattended-upgrades.service
-  fi
