@@ -1,0 +1,20 @@
+summary: Test integration between manpages and haproxy
+systems:
+  - ubuntu-24.04
+
+execute: |
+  pushd "$SPREAD_PATH"
+
+  args="tests/integration/test_ingress.py"
+
+  if [[ -f "$PWD/ubuntu-manpages_amd64.charm" ]]; then
+    args="--charm-path=$PWD/ubuntu-manpages_amd64.charm $args"
+  fi
+
+  make integration ARGS="$args"
+
+restore: |
+  if [[ -z "${CI:-}" ]]; then
+    juju destroy-model --no-prompt --destroy-storage testing
+    juju add-model testing
+  fi
