@@ -1,0 +1,13 @@
+venv/
+build/
+*.charm
+.tox/
+.coverage
+__pycache__/
+*.py[cod]
+*.rock
+.vscode/*
+*.egg-info/
+requirements*.txt
+.spread*
+src/test.py

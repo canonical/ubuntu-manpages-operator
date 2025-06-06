@@ -1,0 +1,15 @@
+{
+  "site": "http://manpages.ubuntu.com",
+  "archive": "http://archive.ubuntu.com/ubuntu",
+  "debdir": "/app/ubuntu",
+  "public_html_dir": "/app/www",
+  "releases": {
+    "jammy": "22.04",
+    "noble": "24.04",
+    "oracular": "24.10",
+    "plucky": "25.04",
+    "questing": "25.10"
+  },
+  "repos": ["main", "restricted", "universe", "multiverse"],
+  "arch": "amd64"
+}
