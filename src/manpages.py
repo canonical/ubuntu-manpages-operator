@@ -95,9 +95,8 @@ class Manpages:
         shutil.copy(config_path / "manpages.conf", NGINX_SITE_CONFIG_PATH)
         shutil.copy(config_path / "update-manpages.service", UPDATE_SERVICE_PATH)
 
-        default_config = Path("/etc/nginx/sites-enables/default")
-        if default_config.exists():
-            default_config.unlink()
+        # Remove default nginx configuration
+        Path("/etc/nginx/sites-enables/default").unlink(missing_ok=True)
 
         # Ensure the "/app" directory is owned by the "www-data" user.
         for dirpath, dirnames, filenames in os.walk(APP_DIR):
