@@ -352,41 +352,6 @@ wheels = [
 ]
 
 [[package]]
-name = "manpages-k8s-operator"
-version = "0.1.0"
-source = { virtual = "." }
-dependencies = [
-    { name = "launchpadlib" },
-    { name = "ops" },
-]
-
-[package.optional-dependencies]
-dev = [
-    { name = "coverage", version = "7.6.1", source = { registry = "https://pypi.org/simple" }, extra = ["toml"], marker = "python_full_version < '3.9'" },
-    { name = "coverage", version = "7.8.2", source = { registry = "https://pypi.org/simple" }, extra = ["toml"], marker = "python_full_version >= '3.9'" },
-    { name = "jubilant" },
-    { name = "ops", extra = ["testing"] },
-    { name = "pydantic", version = "2.10.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
-    { name = "pydantic", version = "2.11.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
-    { name = "pytest", version = "8.3.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
-    { name = "pytest", version = "8.4.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
-    { name = "ruff" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "coverage", extras = ["toml"], marker = "extra == 'dev'" },
-    { name = "jubilant", marker = "extra == 'dev'" },
-    { name = "launchpadlib" },
-    { name = "ops" },
-    { name = "ops", extras = ["testing"], marker = "extra == 'dev'" },
-    { name = "pydantic", marker = "extra == 'dev'" },
-    { name = "pytest", marker = "extra == 'dev'" },
-    { name = "ruff", marker = "extra == 'dev'" },
-]
-provides-extras = ["dev"]
-
-[[package]]
 name = "oauthlib"
 version = "3.2.2"
 source = { registry = "https://pypi.org/simple" }
@@ -1021,6 +986,41 @@ sdist = { url = "https://files.pythonhosted.org/packages/f8/b1/0c11f5058406b3af7
 wheels = [
     { url = "https://files.pythonhosted.org/packages/17/69/cd203477f944c353c31bade965f880aa1061fd6bf05ded0726ca845b6ff7/typing_inspection-0.4.1-py3-none-any.whl", hash = "sha256:389055682238f53b04f7badcb49b989835495a96700ced5dab2d8feae4b26f51", size = 14552, upload-time = "2025-05-21T18:55:22.152Z" },
 ]
+
+[[package]]
+name = "ubuntu-manpages-operator"
+version = "0.1.0"
+source = { virtual = "." }
+dependencies = [
+    { name = "launchpadlib" },
+    { name = "ops" },
+]
+
+[package.optional-dependencies]
+dev = [
+    { name = "coverage", version = "7.6.1", source = { registry = "https://pypi.org/simple" }, extra = ["toml"], marker = "python_full_version < '3.9'" },
+    { name = "coverage", version = "7.8.2", source = { registry = "https://pypi.org/simple" }, extra = ["toml"], marker = "python_full_version >= '3.9'" },
+    { name = "jubilant" },
+    { name = "ops", extra = ["testing"] },
+    { name = "pydantic", version = "2.10.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
+    { name = "pydantic", version = "2.11.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
+    { name = "pytest", version = "8.3.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
+    { name = "pytest", version = "8.4.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
+    { name = "ruff" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "coverage", extras = ["toml"], marker = "extra == 'dev'" },
+    { name = "jubilant", marker = "extra == 'dev'" },
+    { name = "launchpadlib" },
+    { name = "ops" },
+    { name = "ops", extras = ["testing"], marker = "extra == 'dev'" },
+    { name = "pydantic", marker = "extra == 'dev'" },
+    { name = "pytest", marker = "extra == 'dev'" },
+    { name = "ruff", marker = "extra == 'dev'" },
+]
+provides-extras = ["dev"]
 
 [[package]]
 name = "wadllib"
