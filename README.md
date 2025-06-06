@@ -1,6 +1,6 @@
 # Ubuntu Manpages Operator
 
-**Ubuntu Manpages Operator** is a [charm](https://juju.is/charms-architecture) for deploying [https://manpages.ubuntu.com](https://manpages.ubuntu.com), a site which contains thousands of dynamically generated manuals, extracted from every support version of Ubuntu and updated on a regular basis.
+**Ubuntu Manpages Operator** is a [charm](https://juju.is/charms-architecture) for deploying [https://manpages.ubuntu.com](https://manpages.ubuntu.com), a site which contains thousands of dynamically generated manuals, extracted from every supported version of Ubuntu and updated on a regular basis.
 
 This reposistory contains both the [application code](./app) and the code for the [charm](./src).
 
@@ -51,7 +51,7 @@ To update the manpages, you can use the provided Juju [Action](https://documenta
 
 ## Contribute to Ubuntu Manpages Operator
 
-Snapcraft is open source and part of the Canonical family. We would love your help.
+Ubuntu Manpages Operator is open source and part of the Canonical family. We would love your help.
 
 If you're interested, start with the [contribution guide](CONTRIBUTING.md).
 
