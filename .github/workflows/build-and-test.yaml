@@ -102,7 +102,7 @@ jobs:
           echo "suites=$list" >> $GITHUB_OUTPUT
 
   functional-test:
-    name: Spread (${{ matrix.suite }})
+    name: Functional Tests - (${{ matrix.suite }})
     runs-on: ubuntu-24.04
     needs:
       - define-functional-matrix
@@ -155,7 +155,7 @@ jobs:
           echo "suites=$list" >> $GITHUB_OUTPUT
 
   integration-test:
-    name: Spread (${{ matrix.suite }})
+    name: Integration Tests - (${{ matrix.suite }})
     runs-on: ubuntu-24.04
     needs:
       - define-integration-matrix
