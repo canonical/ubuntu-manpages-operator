@@ -28,6 +28,9 @@ care of automatically if you use the `Makefile` provided:
 ❯ make format        # update your code according to linting rules
 ❯ make lint          # code style
 ❯ make unit          # run unit tests
+
+# The following exist, but should not be run directly without `spread`.
+# See 'Running Tests' below.
 ❯ make functional    # run functional tests (run with `spread`)
 ❯ make integration   # run integration tests (run with `spread`)
 ```
@@ -50,7 +53,11 @@ The project's [functional tests](./tests/functional) are designed to be run in a
 ❯ go install github.com/canonical/spread/cmd/spread@latest
 ```
 
-Once set up, running `make functional` will run each of the functional tests in a new LXD virtual machine.
+Once set up, you can run the functional tests with:
+
+```bash
+❯ charmcraft test -v lxd:ubuntu-24.04:tests/spread/functional/
+```
 
 Integration tests also use `spread`. Currently, there are two supported backends -
 tests can either be run in LXD virtual machines, or on a pre-provisioned server (such as a Github
@@ -87,6 +94,16 @@ To run any of the tests on a locally provisioned machine, use the `github-ci` ba
 # Run a particular test
 ❯ charmcraft test -v github-ci:ubuntu-24.04:tests/spread/integration/deploy-charm:juju_3_6
 ```
+
+### Troubleshooting Failing Tests
+
+If you're working on a test that's failing, you can use `spread` to get an interactive shell inside the test environment on failure, which allows for easier debugging. To enable this, add `--debug` to your `charmcraft test` commands. For example:
+
+```bash
+❯ charmcraft test -v --debug lxd:ubuntu-24.04:tests/spread/functional/
+```
+
+If the above tests were to fail, you'd be dropped into an interactive shell before the machine is reaped.
 
 ## Build charm
 
