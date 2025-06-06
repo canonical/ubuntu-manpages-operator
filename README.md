@@ -1,5 +1,8 @@
 # Ubuntu Manpages Operator
 
+<a href="https://charmhub.io/ubuntu-manpages"><img alt="" src="https://charmhub.io/ubuntu-manpages/badge.svg" /></a>
+<a href="https://github.com/canonical/ubuntu-manpages-operator/actions/workflows/release.yaml"><img src="https://github.com/canonical/ubuntu-manpages-operator/actions/workflows/release.yaml/badge.svg"></a>
+
 **Ubuntu Manpages Operator** is a [charm](https://juju.is/charms-architecture) for deploying [https://manpages.ubuntu.com](https://manpages.ubuntu.com), a site which contains thousands of dynamically generated manuals, extracted from every supported version of Ubuntu and updated on a regular basis.
 
 This reposistory contains both the [application code](./app) and the code for the [charm](./src).
