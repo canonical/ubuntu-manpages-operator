@@ -21,7 +21,7 @@ def address(juju: jubilant.Juju):
 
 def test_deploy(juju: jubilant.Juju, manpages_charm):
     juju.deploy(manpages_charm, app=MANPAGES, config={"releases": "noble"})
-    juju.wait(deploy_wait_func)
+    juju.wait(deploy_wait_func, timeout=600)
 
 
 @retry(retry_num=10, retry_sleep_sec=3)

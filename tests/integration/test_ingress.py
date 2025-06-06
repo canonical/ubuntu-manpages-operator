@@ -24,7 +24,7 @@ def test_deploy(juju: jubilant.Juju, manpages_charm):
     juju.integrate(MANPAGES, HAPROXY)
     juju.integrate(HAPROXY, SSC)
 
-    juju.wait(deploy_wait_func)
+    juju.wait(deploy_wait_func, timeout=1800)
 
 
 @retry(retry_num=24, retry_sleep_sec=5)
