@@ -1,0 +1,70 @@
+name: Release to latest/edge
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    uses: ./.github/workflows/build-and-test.yaml
+    secrets:
+      CHARMHUB_TOKEN: "${{ secrets.CHARMHUB_TOKEN }}"
+
+  define-matrix:
+    name: Define charms upload matrix
+    runs-on: ubuntu-24.04
+    needs:
+      - test
+    outputs:
+      charms: ${{ steps.charms.outputs.charms }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+
+      - name: Download charm artifact(s)
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: charm
+
+      - name: Generate matrix list
+        id: charms
+        run: |
+          list="$(ls *.charm | jq -r -ncR '[input]')"
+          echo "charms=$list"
+          echo "charms=$list" >> $GITHUB_OUTPUT
+
+  release-to-charmhub:
+    name: Release to CharmHub
+    runs-on: ubuntu-24.04
+    needs:
+      - define-matrix
+    strategy:
+      matrix:
+        charm: ${{ fromJSON(needs.define-matrix.outputs.charms) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Select charmhub channel
+        id: channel
+        uses: canonical/charming-actions/channel@1753e0803f70445132e92acd45c905aba6473225 # 2.7.0
+
+      - name: Download charm artifact(s)
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: charm
+
+      - name: Upload charm to charmhub
+        uses: canonical/charming-actions/upload-charm@1753e0803f70445132e92acd45c905aba6473225 # 2.7.0
+        with:
+          credentials: "${{ secrets.CHARMHUB_TOKEN }}"
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
+          channel: "${{ steps.channel.outputs.name }}"
+          built-charm-path: "${{ matrix.charm }}"

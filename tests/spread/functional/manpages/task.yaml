@@ -1,0 +1,13 @@
+summary: Run manpages python module functional tests
+systems:
+  - ubuntu-24.04
+
+execute: |
+  pushd "$SPREAD_PATH"
+  make integration ARGS="tests/functional/test_manpages.py"
+
+restore: |
+  if [[ -z "${CI:-}" ]]; then
+      source ${SPREAD_PATH}/tests/spread/common.sh
+      cleanup_manpages
+  fi

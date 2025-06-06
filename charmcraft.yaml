@@ -1,0 +1,53 @@
+# Copyright 2025 Canonical.
+# See LICENSE file for licensing details.
+name: ubuntu-manpages
+description: |
+  Ubuntu Manpages is a site which contains thousands of dynamically
+  generated manuals, extracted from every support version of
+  Ubuntu and updated on a regular basis.
+
+  See the deployed application at https://manpages.ubuntu.com.
+
+summary: |
+  A charm for deploying the online Ubuntu manpage archive.
+
+type: charm
+base: ubuntu@24.04
+platforms:
+  amd64:
+
+parts:
+  manpages-charm:
+    plugin: uv
+    source: .
+    build-snaps:
+      - astral-uv
+
+  manpages-app:
+    plugin: dump
+    source: app
+    organize:
+      bin: app/bin
+      www: app/www
+      config: app/config
+
+charm-libs:
+  - lib: operator_libs_linux.apt
+    version: "0"
+  - lib: operator_libs_linux.systemd
+    version: "1"
+
+config:
+  options:
+    releases:
+      type: string
+      default: "questing, plucky, oracular, noble, jammy"
+      description: |
+        The releases to generate manpages for.
+
+        Comma-separated list of Ubuntu release codenames.
+        For example: "questing, plucky, oracular, noble, jammy"
+
+actions:
+  update-manpages:
+    description: Update manpages from the archive

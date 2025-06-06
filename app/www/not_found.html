@@ -1,0 +1,24 @@
+<script language="JavaScript">
+    var q = location.href;
+    if (q.search(/\/manpages\/.*\/man[0-9]\/.*[^0-9]\.html$/) >= 0) {
+        // Current location matches a legacy link, with just a plain .html filename
+        // Try to redirect to the new location, which has a .[0-9].html filename
+        location.replace(
+            q.replace(/\/man([0-9])\/(.*)\.html/, "/man$1/$2.$1.html"),
+        );
+    } else {
+        // Try redirecting to a page of search results
+        q = q.replace(/.*\//, "");
+        q = q.replace(/\.html$/, "");
+        location.replace("/cgi-bin/search.py?titles=404&lr=lang_en&q=" + q);
+    }
+</script>
+
+<!--#include virtual="/above1.html" -->
+Not Found
+<!--#include virtual="/above2.html" -->
+<br /><big
+    ><big><strong>We could not find that page</strong></big></big
+><br /><br />
+We will try to redirect you to some related material.
+<!--#include virtual="/below.html" -->
