@@ -7,8 +7,8 @@ execute: |
 
   args="tests/integration/test_charm.py"
 
-  if [[ -f "$PWD/manpages_amd64.charm" ]]; then
-    args="--charm-path=$PWD/manpages_amd64.charm $args"
+  if [[ -f "$PWD/ubuntu-manpages_amd64.charm" ]]; then
+    args="--charm-path=$PWD/ubuntu-manpages_amd64.charm $args"
   fi
 
   make integration ARGS="$args"
