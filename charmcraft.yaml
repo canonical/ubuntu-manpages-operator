@@ -59,3 +59,11 @@ config:
 actions:
   update-manpages:
     description: Update manpages from the archive
+
+storage:
+  manpages:
+    type: filesystem
+    location: /app/www/manpages
+  manpages-gz:
+    type: filesystem
+    location: /app/www/manpages.gz
