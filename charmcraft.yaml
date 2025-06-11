@@ -28,8 +28,13 @@ parts:
   manpages-charm:
     plugin: uv
     source: .
+    build-packages:
+      - git
     build-snaps:
       - astral-uv
+    override-build: |
+      craftctl default
+      git describe --always > $CRAFT_PART_INSTALL/version
 
   manpages-app:
     plugin: dump
