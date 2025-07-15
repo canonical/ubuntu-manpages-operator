@@ -87,3 +87,4 @@ requires:
   ingress:
     interface: ingress
     limit: 1
+    optional: true
