@@ -36,8 +36,8 @@ class ManpagesCharm(ops.CharmBase):
 
         # Ingress URL changes require updating the configuration and also regenerating sitemaps,
         # therefore we can bind events for this relation to the config_changed event.
-        framework.observe(self.on.ingress_relation_changed, self._on_config_changed)
-        framework.observe(self.on.ingress_relation_departed, self._on_config_changed)
+        framework.observe(self.ingress.on.ready, self._on_config_changed)
+        framework.observe(self.ingress.on.revoked, self._on_config_changed)
 
         self._manpages = Manpages(LaunchpadClient())
 
@@ -52,7 +52,7 @@ class ManpagesCharm(ops.CharmBase):
             )
             return
 
-    def _on_config_changed(self, event: ops.ConfigChangedEvent):
+    def _on_config_changed(self, event):
         """Update configuration and fetch relevant manpages."""
         self.unit.status = ops.MaintenanceStatus("Updating configuration")
         try:
