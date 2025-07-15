@@ -34,7 +34,7 @@ class LaunchpadClient(LaunchpadClientBase):
         """
         release_map = {}
 
-        lp = Launchpad.login_anonymously("manpages", lplib.uris.LPNET_SERVICE_ROOT)
+        lp = Launchpad.login_anonymously("manpages", lplib.uris.LPNET_SERVICE_ROOT)  # ty: ignore[unresolved-attribute]
 
         for release in releases:
             try:

@@ -52,7 +52,7 @@ def test_install_manpages(manpages):
     assert NGINX_SITE_CONFIG_PATH.exists()
     assert UPDATE_SERVICE_PATH.exists()
 
-    assert not Path("/etc/nginx/sites-enables/default").exists(follow_symlinks=False)
+    assert not Path("/etc/nginx/sites-enables/default").exists(follow_symlinks=False)  # ty: ignore[unknown-argument]
 
     # Ensure ownership of directories and files was set correctly.
     assert WWW_DIR.owner() == "www-data"

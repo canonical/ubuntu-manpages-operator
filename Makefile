@@ -16,6 +16,7 @@ generate-requirements:
 lint:
 	uv tool run ruff check $(ALL)
 	uv tool run ruff format --check --diff $(ALL)
+	uv run --all-extras ty check $(SRC) $(TESTS)
 	shellcheck $(PROJECT)app/bin/*
 	shfmt -d $(PROJECT)app/bin/*
 
