@@ -23,21 +23,21 @@ PORT = 8080
 class ManpagesCharm(ops.CharmBase):
     """Charmed Operator for manpages.ubuntu.com."""
 
-    def __init__(self, *args):
-        super().__init__(*args)
+    def __init__(self, framework: ops.Framework):
+        super().__init__(framework)
         self.ingress = IngressRequirer(self, port=PORT, strip_prefix=True, relation_name="ingress")
 
-        self.framework.observe(self.on.install, self._on_install)
-        self.framework.observe(self.on.start, self._on_start)
-        self.framework.observe(self.on.upgrade_charm, self._on_install)
-        self.framework.observe(self.on.update_status, self._on_update_status)
-        self.framework.observe(self.on.update_manpages_action, self._on_config_changed)
-        self.framework.observe(self.on.config_changed, self._on_config_changed)
+        framework.observe(self.on.install, self._on_install)
+        framework.observe(self.on.start, self._on_start)
+        framework.observe(self.on.upgrade_charm, self._on_install)
+        framework.observe(self.on.update_status, self._on_update_status)
+        framework.observe(self.on.update_manpages_action, self._on_config_changed)
+        framework.observe(self.on.config_changed, self._on_config_changed)
 
         # Ingress URL changes require updating the configuration and also regenerating sitemaps,
         # therefore we can bind events for this relation to the config_changed event.
-        self.framework.observe(self.on.ingress_relation_changed, self._on_config_changed)
-        self.framework.observe(self.on.ingress_relation_departed, self._on_config_changed)
+        framework.observe(self.on.ingress_relation_changed, self._on_config_changed)
+        framework.observe(self.on.ingress_relation_departed, self._on_config_changed)
 
         self._manpages = Manpages(LaunchpadClient())
 
