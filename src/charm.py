@@ -50,7 +50,6 @@ class ManpagesCharm(ops.CharmBase):
             self.unit.status = ops.BlockedStatus(
                 "Failed to install packages. Check `juju debug-log` for details."
             )
-            return
 
     def _on_config_changed(self, event):
         """Update configuration and fetch relevant manpages."""
@@ -70,7 +69,6 @@ class ManpagesCharm(ops.CharmBase):
             self.unit.status = ops.MaintenanceStatus(
                 "Failed to update manpages. Check `juju debug-log` for details."
             )
-            return
 
     def _on_start(self, event: ops.StartEvent):
         """Start the manpages service."""
