@@ -42,7 +42,7 @@ class ManpagesCharm(ops.CharmBase):
         self._manpages = Manpages(LaunchpadClient())
 
     def _on_install(self, event: ops.InstallEvent):
-        """Define and start a workload using the Pebble API."""
+        """Install the packages and configuration for ubuntu-manpages."""
         self.unit.status = ops.MaintenanceStatus("Installing manpages")
         try:
             self._manpages.install()
