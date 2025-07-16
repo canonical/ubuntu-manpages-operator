@@ -169,7 +169,7 @@ jobs:
 
   integration-test:
     name: Integration Tests - (${{ matrix.suite }})
-    runs-on: [self-hosted, large, noble]
+    runs-on: [self-hosted, large, noble, amd64]
     needs:
       - define-integration-matrix
       - lib-check
