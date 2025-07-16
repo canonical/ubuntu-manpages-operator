@@ -9,6 +9,7 @@ the internet.
 """
 
 import json
+import os
 from dataclasses import asdict
 from pathlib import Path
 
@@ -58,6 +59,22 @@ def test_install_manpages(manpages):
     assert WWW_DIR.owner() == "www-data"
     assert BIN_DIR.owner() == "www-data"
     assert APP_DIR.owner() == "www-data"
+
+
+def test_install_manpages_with_proxy_config(manpages):
+    os.environ["JUJU_CHARM_HTTP_PROXY"] = "http://proxy.example.com"
+    os.environ["JUJU_CHARM_HTTPS_PROXY"] = "https://proxy.example.com"
+    manpages.install()
+
+    assert UPDATE_SERVICE_PATH.exists()
+
+    lines = UPDATE_SERVICE_PATH.read_text().splitlines()
+
+    assert "Environment=HTTP_PROXY=http://proxy.example.com" in lines
+    assert "Environment=HTTPS_PROXY=https://proxy.example.com" in lines
+
+    del os.environ["JUJU_CHARM_HTTP_PROXY"]
+    del os.environ["JUJU_CHARM_HTTPS_PROXY"]
 
 
 def test_configure_manpages(manpages):

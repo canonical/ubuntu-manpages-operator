@@ -15,6 +15,7 @@ from subprocess import CalledProcessError
 import charms.operator_libs_linux.v0.apt as apt
 from charms.operator_libs_linux.v0.apt import PackageError, PackageNotFoundError
 from charms.operator_libs_linux.v1.systemd import service_restart, service_running
+from jinja2 import Environment, FileSystemLoader
 
 logger = logging.getLogger(__name__)
 
@@ -93,7 +94,7 @@ class Manpages:
         # Install configuration files
         config_path = source_path / "config"
         shutil.copy(config_path / "manpages.conf", NGINX_SITE_CONFIG_PATH)
-        shutil.copy(config_path / "update-manpages.service", UPDATE_SERVICE_PATH)
+        self._template_systemd_unit()
 
         # Remove default nginx configuration
         Path("/etc/nginx/sites-enables/default").unlink(missing_ok=True)
@@ -116,6 +117,10 @@ class Manpages:
             logger.error("failed to build manpages configuration: invalid releases spec: %s", e)
             raise
 
+        # Ensure the systemd unit is updated in case the Juju proxy config has changed.
+        self._template_systemd_unit()
+
+        # Write the configuration file for the application.
         with open(CONFIG_PATH, "w") as f:
             json.dump(asdict(config), f)
 
@@ -176,3 +181,27 @@ class Manpages:
             raise ValueError(f"failed to build manpages config: {e}")
 
         return config
+
+    def _template_systemd_unit(self):
+        """Template out systemd unit file including proxy variables."""
+        # Maps Juju specific proxy environment variables to system equivalents.
+        proxy_vars = [
+            ("JUJU_CHARM_HTTP_PROXY", "HTTP_PROXY"),
+            ("JUJU_CHARM_HTTPS_PROXY", "HTTPS_PROXY"),
+            ("JUJU_CHARM_NO_PROXY", "NO_PROXY"),
+        ]
+
+        # Iterate over the possible proxy variables, and if a value is set,
+        # construct a systemd 'Environment' line and add to the list of lines.
+        lines = []
+        for v in proxy_vars:
+            if proxy := os.environ.get(v[0], None):
+                lines.append(f"\nEnvironment={v[1]}={proxy}")
+
+        # Template out the unit file and write it to disk.
+        env = Environment(loader=FileSystemLoader(Path(__file__).parent.parent / "app" / "config"))
+        template = env.get_template("update-manpages.service.j2")
+        context = {"proxy_config": "\n".join(lines)}
+
+        with open(UPDATE_SERVICE_PATH, "w") as f:
+            f.write(template.render(context))
