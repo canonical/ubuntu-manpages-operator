@@ -16,6 +16,9 @@ jobs:
   test:
     name: Build and Test
     uses: ./.github/workflows/build-and-test.yaml
+    permissions:
+      contents: write
+      pull-requests: write
     secrets:
       CHARMHUB_TOKEN: "${{ secrets.CHARMHUB_TOKEN }}"
 
