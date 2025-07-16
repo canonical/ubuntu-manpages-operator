@@ -4,9 +4,11 @@
 
 """A simple Launchpad client implementation."""
 
+import os
 from abc import ABC
-from typing import Dict, List
+from typing import Dict, List, Optional
 
+import httplib2
 import launchpadlib as lplib
 from launchpadlib.launchpad import Launchpad
 
@@ -34,7 +36,11 @@ class LaunchpadClient(LaunchpadClientBase):
         """
         release_map = {}
 
-        lp = Launchpad.login_anonymously("manpages", lplib.uris.LPNET_SERVICE_ROOT)  # ty: ignore[unresolved-attribute]
+        lp = Launchpad.login_anonymously(
+            "manpages",
+            lplib.uris.LPNET_SERVICE_ROOT,  # ty: ignore[unresolved-attribute]
+            proxy_info=_proxy_config,
+        )
 
         for release in releases:
             try:
@@ -76,3 +82,19 @@ class MockLaunchpadClient(LaunchpadClientBase):
 
         # Return the release map, sorted in descending order by version.
         return dict(sorted(release_map.items(), key=lambda item: item[1]))
+
+
+def _proxy_config(method="https") -> Optional[httplib2.ProxyInfo]:
+    """Get charm proxy information from juju charm environment."""
+    if method not in ("http", "https"):
+        return
+
+    env_var = f"JUJU_CHARM_{method.upper()}_PROXY"
+    url = os.environ.get(env_var)
+
+    if not url:
+        return
+
+    noproxy = os.environ.get("JUJU_CHARM_NO_PROXY", None)
+
+    return httplib2.proxy_info_from_url(url, method, noproxy)
