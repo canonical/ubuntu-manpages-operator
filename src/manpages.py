@@ -193,10 +193,14 @@ class Manpages:
 
         # Iterate over the possible proxy variables, and if a value is set,
         # construct a systemd 'Environment' line and add to the list of lines.
+        # Add both upper and lower case to account for expectations of different applications
+        # e.g. curl only accepts the lower case form of "http_proxy"
+        # https://everything.curl.dev/usingcurl/proxies/env.html#http_proxy-in-lower-case-only
         lines = []
         for v in proxy_vars:
             if proxy := os.environ.get(v[0], None):
                 lines.append(f"\nEnvironment={v[1]}={proxy}")
+                lines.append(f"\nEnvironment={v[1].lower()}={proxy}")
 
         # Template out the unit file and write it to disk.
         env = Environment(loader=FileSystemLoader(Path(__file__).parent.parent / "app" / "config"))

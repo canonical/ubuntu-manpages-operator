@@ -70,7 +70,9 @@ def test_install_manpages_with_proxy_config(manpages):
 
     lines = UPDATE_SERVICE_PATH.read_text().splitlines()
 
+    assert "Environment=http_proxy=http://proxy.example.com" in lines
     assert "Environment=HTTP_PROXY=http://proxy.example.com" in lines
+    assert "Environment=https_proxy=https://proxy.example.com" in lines
     assert "Environment=HTTPS_PROXY=https://proxy.example.com" in lines
 
     del os.environ["JUJU_CHARM_HTTP_PROXY"]
