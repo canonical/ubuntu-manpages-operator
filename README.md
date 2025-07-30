@@ -72,6 +72,14 @@ The charm supports integrations with ingress/proxy services using the `ingress` 
 
 The scenario described above is demonstrated [in the integration tests](./tests/integration/test_ingress.py).
 
+## Deployment requirements
+
+As of 2025-07-30, the deployment requirements have been observed to be the following:
+* Configured releases: Jammy, Noble, Plucky, Questing
+* Disk space used in the `/app/www` folder: `9.4GiB`
+* Size of a single release in that folder: `~1.7GiB` (HTML) + `~750MiB` (.gz manpages)
+* Stats from the systemd service, on a 4 cores VM: `update-manpages.service: Consumed 1d 2h 50min 47.755s CPU time, 4.7G memory peak, 0B memory swap peak.`
+
 ## Contribute to Ubuntu Manpages Operator
 
 Ubuntu Manpages Operator is open source and part of the Canonical family. We would love your help.
