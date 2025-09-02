@@ -22,7 +22,7 @@ def test_deploy(juju: jubilant.Juju, manpages_charm):
     juju.deploy(SSC, channel="1/edge")
 
     juju.integrate(MANPAGES, HAPROXY)
-    juju.integrate(HAPROXY, SSC)
+    juju.integrate(f"{HAPROXY}:certificates", f"{SSC}:certificates")
 
     juju.wait(deploy_wait_func, timeout=1800)
 
