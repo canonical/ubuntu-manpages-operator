@@ -649,7 +649,7 @@ wheels = [
 
 [[package]]
 name = "ops"
-version = "2.23.0"
+version = "2.23.1"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version == '3.9.*'",
@@ -663,70 +663,69 @@ dependencies = [
     { name = "pyyaml", marker = "python_full_version < '3.10'" },
     { name = "websocket-client", marker = "python_full_version < '3.10'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/8e/c8/1e85a3e025fdf28283107c56d40229075e79ae1ac0736f2ca67ae1e2a635/ops-2.23.0.tar.gz", hash = "sha256:3e6c29a8f2119c7b8eaa88c82b5371de236dfcb7a7bf0012a6e2a829f0837fb7", size = 527426, upload-time = "2025-06-30T07:50:04.444Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/38/2d/488896632da371da6af1265c5fc6e39142f14b31d4c78a6c69cf453fcfd9/ops-2.23.1.tar.gz", hash = "sha256:aecacd67ef7ca913f63f397e0330bfa93d70529a3ef71ed2d99e2bc232564ae3", size = 527723, upload-time = "2025-07-30T06:26:55.029Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/63/0e/86b8893f08c4ff8e3c15f983b30cf59f99b0a940600a484b886703aba317/ops-2.23.0-py3-none-any.whl", hash = "sha256:7a42840410e8570acc3a4b498973a5bcd3fd0b12dd06837f57b9379b3acdfac3", size = 188165, upload-time = "2025-06-30T07:50:02.779Z" },
+    { url = "https://files.pythonhosted.org/packages/ac/62/4b7bb8fa879c672d53cd3b58dc4df0f8cd8007e32d8bc73ec21d8bf238c6/ops-2.23.1-py3-none-any.whl", hash = "sha256:fdf58163beafd25180c12a4c7efaf1e76e5f8710508a97840c07055bb78b0c77", size = 188414, upload-time = "2025-07-30T06:26:53.361Z" },
 ]
 
 [package.optional-dependencies]
 testing = [
-    { name = "ops-scenario", version = "7.23.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
+    { name = "ops-scenario", version = "7.23.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
 ]
 
 [[package]]
 name = "ops"
-version = "3.0.0"
+version = "3.3.0"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version >= '3.10'",
 ]
 dependencies = [
-    { name = "importlib-metadata", version = "8.7.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
     { name = "opentelemetry-api", version = "1.35.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
     { name = "pyyaml", marker = "python_full_version >= '3.10'" },
     { name = "websocket-client", marker = "python_full_version >= '3.10'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/da/92/6bf6c91d4d0e4007d835fe73b1b73159d0c3dde4059c301c572ce2fc3ddd/ops-3.0.0.tar.gz", hash = "sha256:f4709f7699a2b8b0aaa3a6ad891fb8e4925792121fcb762ef264d24f87675680", size = 527591, upload-time = "2025-07-02T10:40:20.152Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/00/42/dd7f3129ea3feb083e9787406c75249f1a311ae829d0d1adefd54c42fc73/ops-3.3.0.tar.gz", hash = "sha256:f89613def8b4a231218038ba5656927c522532e42b2dd8c06e12ff7a45bc647a", size = 541714, upload-time = "2025-09-29T04:01:44.179Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/66/d6/fe94db94ab773efa87223ffbf1f3c243e04c37d82b366c6a900c1ba1ea0e/ops-3.0.0-py3-none-any.whl", hash = "sha256:f71d62c1d5ae58c01acc37fb330c6aa13aa1e2913fc44519b5ac31b93b9181ec", size = 188167, upload-time = "2025-07-02T10:40:18.439Z" },
+    { url = "https://files.pythonhosted.org/packages/7d/7e/ba6915be399db5b671d5b7d162aefa298507676efcc77f75227d2e599991/ops-3.3.0-py3-none-any.whl", hash = "sha256:4f03013dfe325690add181f989b571259cc4add8a8a5cafbd380ffcc2bbd7c1d", size = 191346, upload-time = "2025-09-29T04:01:40.016Z" },
 ]
 
 [package.optional-dependencies]
 testing = [
-    { name = "ops-scenario", version = "8.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+    { name = "ops-scenario", version = "8.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
 ]
 
 [[package]]
 name = "ops-scenario"
-version = "7.23.0"
+version = "7.23.1"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version == '3.9.*'",
     "python_full_version < '3.9'",
 ]
 dependencies = [
-    { name = "ops", version = "2.23.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
+    { name = "ops", version = "2.23.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "pyyaml", marker = "python_full_version < '3.10'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c5/6d/c492eeb69930b33cc1d099c510df890fd27afc296ca88e1d5c3fac675636/ops_scenario-7.23.0.tar.gz", hash = "sha256:32a40966a92138779e5f47fff0653037e98e4561fcb30a02014733a88a68c998", size = 109460, upload-time = "2025-06-30T07:50:12.54Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/dd/5d/bb3b6fd722b2b1f0831252e5cbd5a632ecce5361b5c4c009caf67ac30c19/ops_scenario-7.23.1.tar.gz", hash = "sha256:ae71a9a27c953b65d621495008f9f785aff28543810660063541d0b2990b2101", size = 109493, upload-time = "2025-07-30T06:26:59.101Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/03/a6/cfc7ef8e1530363f55462eb24e6a37f429891a287209bb288c4f80525459/ops_scenario-7.23.0-py3-none-any.whl", hash = "sha256:88ddb6b8b41688c580b38fc10dfa3706ab65a481931c26b07a298f2dd82a86ae", size = 64313, upload-time = "2025-06-30T07:50:10.799Z" },
+    { url = "https://files.pythonhosted.org/packages/48/78/75811a1368507f66660c3e38a69da4a1c8f2b9968b10e67741c786576686/ops_scenario-7.23.1-py3-none-any.whl", hash = "sha256:fe56f4cd19fb003285505b2fe22bc5c5beda77e06496bd0ed833456b55008324", size = 64312, upload-time = "2025-07-30T06:26:57.572Z" },
 ]
 
 [[package]]
 name = "ops-scenario"
-version = "8.0.0"
+version = "8.3.0"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version >= '3.10'",
 ]
 dependencies = [
-    { name = "ops", version = "3.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+    { name = "ops", version = "3.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
     { name = "pyyaml", marker = "python_full_version >= '3.10'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/10/23/3737c3a76bd3129eb571538d22e81f58727c0670b6cba24febd4ccdeb2f0/ops_scenario-8.0.0.tar.gz", hash = "sha256:b358228f3c88ab36f93c467e926c2ef20f16a99578a490a9fd9733eb1eab175c", size = 109454, upload-time = "2025-07-02T10:40:32.623Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/6f/c4/c230f40926ee361aaa7bc529a1c7ac9e65c67b28251eb77718b09a851b68/ops_scenario-8.3.0.tar.gz", hash = "sha256:97bbfcfe3f98280c0c585ea60bf5210f4dc324b30f8db0b816c9450b4f5bcfc6", size = 110284, upload-time = "2025-09-29T04:01:45.369Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/17/c7/78f623df92e3c6220eb8dd963f7fbb3df69934c74aa073deb7c77d4407e3/ops_scenario-8.0.0-py3-none-any.whl", hash = "sha256:5d52e7162cc7cb2a26c8fd62df3f3fb88668a407af4024c1be6003959c80e2de", size = 64300, upload-time = "2025-07-02T10:40:31.002Z" },
+    { url = "https://files.pythonhosted.org/packages/80/05/55331c60603dc0b12ce7fa4095e8e432a11affc7fa23c90dff8b0a0c14b3/ops_scenario-8.3.0-py3-none-any.whl", hash = "sha256:ae8be8a50a5520f1fe4a092d8a11e3b8865cea3532e78b4bb1f93d86e72bf6d9", size = 64407, upload-time = "2025-09-29T04:01:41.861Z" },
 ]
 
 [[package]]
@@ -1345,8 +1344,8 @@ dependencies = [
     { name = "httplib2" },
     { name = "jinja2" },
     { name = "launchpadlib" },
-    { name = "ops", version = "2.23.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
-    { name = "ops", version = "3.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+    { name = "ops", version = "2.23.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
+    { name = "ops", version = "3.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
     { name = "pydantic", version = "2.10.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
     { name = "pydantic", version = "2.11.7", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
 ]
@@ -1356,8 +1355,8 @@ dev = [
     { name = "coverage", version = "7.6.1", source = { registry = "https://pypi.org/simple" }, extra = ["toml"], marker = "python_full_version < '3.9'" },
     { name = "coverage", version = "7.9.2", source = { registry = "https://pypi.org/simple" }, extra = ["toml"], marker = "python_full_version >= '3.9'" },
     { name = "jubilant" },
-    { name = "ops", version = "2.23.0", source = { registry = "https://pypi.org/simple" }, extra = ["testing"], marker = "python_full_version < '3.10'" },
-    { name = "ops", version = "3.0.0", source = { registry = "https://pypi.org/simple" }, extra = ["testing"], marker = "python_full_version >= '3.10'" },
+    { name = "ops", version = "2.23.1", source = { registry = "https://pypi.org/simple" }, extra = ["testing"], marker = "python_full_version < '3.10'" },
+    { name = "ops", version = "3.3.0", source = { registry = "https://pypi.org/simple" }, extra = ["testing"], marker = "python_full_version >= '3.10'" },
     { name = "pydantic", version = "2.10.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
     { name = "pydantic", version = "2.11.7", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
     { name = "pytest", version = "8.3.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
