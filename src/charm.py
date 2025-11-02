@@ -55,7 +55,7 @@ class ManpagesCharm(ops.CharmBase):
         """Update configuration and fetch relevant manpages."""
         self.unit.status = ops.MaintenanceStatus("Updating configuration")
         try:
-            self._manpages.configure(self.config["releases"], self._get_external_url())
+            self._manpages.configure(str(self.config["releases"]), self._get_external_url())
         except ValueError:
             self.unit.status = ops.BlockedStatus(
                 "Invalid configuration. Check `juju debug-log` for details."
