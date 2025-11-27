@@ -1,6 +1,7 @@
 # Copyright 2025 Canonical
 # See LICENSE file for licensing details.
 
+import os
 import subprocess
 from pathlib import Path
 
@@ -21,12 +22,15 @@ def manpages_charm(request):
     if charm_file:
         return charm_file
 
+    working_dir = os.getenv("SPREAD_PATH", Path("."))
+
     subprocess.run(
         ["/snap/bin/charmcraft", "pack", "--verbose"],
-        check=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
+        cwd=working_dir,
+        check=True,
     )
 
-    return next(Path.glob(Path("."), "*.charm")).absolute()
+    return next(Path.glob(Path(working_dir), "*.charm")).absolute()

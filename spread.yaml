@@ -91,7 +91,6 @@ suites:
 
 exclude:
   - .coverage
-  - .git
   - .github
   - .pytest_cache
   - .ruff_cache
