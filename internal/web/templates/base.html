@@ -150,29 +150,7 @@
       </div>
     </div>
 
-    <script>
-    (function () {
-      var drawer = document.querySelector("[class*='p-side-navigation']");
-      if (!drawer) return;
-      var toggles = document.querySelectorAll(".js-drawer-toggle");
-      toggles.forEach(function (toggle) {
-        toggle.addEventListener("click", function (e) {
-          e.preventDefault();
-          if (drawer.classList.contains("is-expanded")) {
-            drawer.classList.remove("is-expanded");
-          } else {
-            drawer.classList.add("is-expanded");
-          }
-        });
-      });
-      document.addEventListener("keyup", function (e) {
-        if (e.key === "Escape" && drawer.classList.contains("is-expanded")) {
-          drawer.classList.remove("is-expanded");
-        }
-      });
-    })();
-    </script>
-    {{ block "scripts" . }}{{ end }}
+    <script src="/static/app.js"></script>
   </body>
 </html>
 {{ end }}

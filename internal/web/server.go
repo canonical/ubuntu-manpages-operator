@@ -24,7 +24,7 @@ import (
 	"github.com/canonical/ubuntu-manpages-operator/internal/transform"
 )
 
-//go:embed templates/base.html templates/index.html templates/search.html templates/browse.html templates/manpage.html templates/404.html static/docs.css
+//go:embed templates/base.html templates/index.html templates/search.html templates/browse.html templates/manpage.html templates/404.html static/docs.css static/app.js
 var webAssets embed.FS
 
 const (
@@ -156,7 +156,7 @@ func (s *Server) ListenAndServe(addr string) error {
 
 	srv := &http.Server{
 		Addr:              addr,
-		Handler:           s.logRequests(gzipHandler(mux)),
+		Handler:           s.logRequests(securityHeaders(gzipHandler(mux))),
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       30 * time.Second,
 		WriteTimeout:      60 * time.Second,
@@ -335,6 +335,19 @@ func (s *Server) logRequests(next http.Handler) http.Handler {
 			"status", rw.statusCode,
 			"duration", time.Since(start),
 		)
+	})
+}
+
+func securityHeaders(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Security-Policy",
+			"default-src 'none'; script-src 'self'; style-src 'self' https://assets.ubuntu.com; "+
+				"img-src 'self' https://assets.ubuntu.com; font-src 'self' https://assets.ubuntu.com; "+
+				"frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("X-Frame-Options", "DENY")
+		w.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
+		next.ServeHTTP(w, r)
 	})
 }
 
