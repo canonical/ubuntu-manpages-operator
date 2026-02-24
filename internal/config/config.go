@@ -1,79 +1,61 @@
 package config
 
 import (
-	"encoding/json"
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 )
 
-const defaultConfigPath = "/app/www/config.json"
-
-// Config matches the current JSON schema used by the charm.
+// Config holds application configuration loaded from environment variables.
 type Config struct {
-	Site          string            `json:"site"`
-	Archive       string            `json:"archive"`
-	PublicHTMLDir string            `json:"public_html_dir"`
-	IndexDir      string            `json:"index_dir"`
-	Releases      map[string]string `json:"releases"`
-	Repos         []string          `json:"repos"`
-	Arch          string            `json:"arch"`
+	Site            string
+	Archive         string
+	PublicHTMLDir   string
+	Releases        []string
+	ReleaseVersions map[string]string
+	Repos           []string
+	Arch            string
 }
 
-func DefaultPath() string {
-	if path := os.Getenv("MANPAGES_CONFIG_FILE"); path != "" {
-		return path
+// Load reads configuration from environment variables, applying defaults
+// for any that are unset.
+func Load() *Config {
+	cfg := &Config{
+		Site:          envOrDefault("MANPAGES_SITE", "https://manpages.ubuntu.com"),
+		Archive:       envOrDefault("MANPAGES_ARCHIVE", "http://archive.ubuntu.com"),
+		PublicHTMLDir: envOrDefault("MANPAGES_PUBLIC_HTML_DIR", "/app/www"),
+		Releases:      splitCSV(envOrDefault("MANPAGES_RELEASES", "trusty, xenial, bionic, jammy, noble, plucky, questing")),
+		Repos:         splitCSV(envOrDefault("MANPAGES_REPOS", "main, restricted, universe, multiverse")),
+		Arch:          envOrDefault("MANPAGES_ARCH", "amd64"),
 	}
-	return defaultConfigPath
-}
-
-func Load(path string) (*Config, error) {
-	raw, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("read config: %w", err)
-	}
-
-	var cfg Config
-	if err := json.Unmarshal(raw, &cfg); err != nil {
-		return nil, fmt.Errorf("parse config: %w", err)
-	}
-
-	if err := cfg.Validate(); err != nil {
-		return nil, err
-	}
-
-	return &cfg, nil
+	return cfg
 }
 
 func (c *Config) Validate() error {
 	if c.Site == "" {
-		return errors.New("config site is required")
+		return errors.New("config: site is required")
 	}
 	if c.Archive == "" {
-		return errors.New("config archive is required")
+		return errors.New("config: archive is required")
 	}
 	if c.PublicHTMLDir == "" {
-		return errors.New("config public_html_dir is required")
+		return errors.New("config: public_html_dir is required")
 	}
 	if len(c.Releases) == 0 {
-		return errors.New("config releases is required")
+		return errors.New("config: releases is required")
 	}
 	if len(c.Repos) == 0 {
-		return errors.New("config repos is required")
+		return errors.New("config: repos is required")
 	}
 	if c.Arch == "" {
-		return errors.New("config arch is required")
+		return errors.New("config: arch is required")
 	}
 	return nil
 }
 
 func (c *Config) IndexPath() string {
-	if c.IndexDir != "" {
-		return c.IndexDir
-	}
 	return filepath.Join(c.PublicHTMLDir, "search.db")
 }
 
@@ -82,10 +64,27 @@ func (c *Config) SiteURL() string {
 }
 
 func (c *Config) ReleaseKeys() []string {
-	keys := make([]string, 0, len(c.Releases))
-	for release := range c.Releases {
-		keys = append(keys, release)
-	}
+	keys := make([]string, len(c.Releases))
+	copy(keys, c.Releases)
 	sort.Strings(keys)
 	return keys
+}
+
+func envOrDefault(key, fallback string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return fallback
+}
+
+func splitCSV(s string) []string {
+	parts := strings.Split(s, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
 }
