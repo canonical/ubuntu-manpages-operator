@@ -31,7 +31,6 @@ care of automatically if you use the `Makefile` provided:
 
 # The following exist, but should not be run directly without `spread`.
 # See 'Running Tests' below.
-❯ make functional    # run functional tests (run with `spread`)
 ❯ make integration   # run integration tests (run with `spread`)
 ```
 
@@ -47,18 +46,6 @@ To create the environment manually:
 
 Unit tests can be run locally with no additional tools by running `make unit`. All of the project's unit tests are designed to run agnostic of machine and network, and shouldn't require any additional dependencies other than those injected by `uv run` and the `Make` target.
 
-The project's [functional tests](./tests/functional) are designed to be run in an ephemeral environment. They require an internet connection, and will mutate the system they run on. This is taken care of automatically by using [`spread`](https://github.com/canonical/spread), which you can install like so:
-
-```bash
-❯ go install github.com/canonical/spread/cmd/spread@latest
-```
-
-Once set up, you can run the functional tests with:
-
-```bash
-❯ charmcraft test -v lxd:ubuntu-24.04:tests/spread/functional/
-```
-
 Integration tests also use `spread`. Currently, there are two supported backends -
 tests can either be run in LXD virtual machines, or on a pre-provisioned server (such as a Github
 Actions runner or development VM).
@@ -67,8 +54,6 @@ To show the available integration tests, you can:
 
 ```bash
 ❯ charmcraft test --list lxd:
-lxd:ubuntu-24.04:tests/spread/functional/launchpad
-lxd:ubuntu-24.04:tests/spread/functional/manpages
 lxd:ubuntu-24.04:tests/spread/integration/deploy-charm:juju_3_6
 ```
 
@@ -100,7 +85,7 @@ To run any of the tests on a locally provisioned machine, use the `github-ci` ba
 If you're working on a test that's failing, you can use `spread` to get an interactive shell inside the test environment on failure, which allows for easier debugging. To enable this, add `--debug` to your `charmcraft test` commands. For example:
 
 ```bash
-❯ charmcraft test -v --debug lxd:ubuntu-24.04:tests/spread/functional/
+❯ charmcraft test -v --debug lxd:ubuntu-24.04:tests/spread/integration/
 ```
 
 If the above tests were to fail, you'd be dropped into an interactive shell before the machine is reaped.
