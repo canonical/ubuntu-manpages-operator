@@ -273,10 +273,11 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
 
 	results, err := s.search.Search(r.Context(), query, distro, lang, limit, offset)
 	if err != nil {
+		s.logger.Error("search failed", "error", err, "query", query)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
 		_ = json.NewEncoder(w).Encode(map[string]string{
-			"error": err.Error(),
+			"error": "search failed",
 		})
 		return
 	}
