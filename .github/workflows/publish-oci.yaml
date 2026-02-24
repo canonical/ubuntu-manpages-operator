@@ -37,12 +37,12 @@ jobs:
       - name: Upload ROCK to ghcr.io
         run: |
           sudo skopeo --insecure-policy copy \
-            "oci-archive:$(realpath ./upki-mirror_*.rock)" \
+            "oci-archive:$(realpath ./ubuntu-manpages_*.rock)" \
             "docker://ghcr.io/canonical/ubuntu-manpages-operator:${{ steps.get_version.outputs.VERSION }}" \
             --dest-creds "${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}"
 
           # Upload ROCK to ghcr.io/canonical/ubuntu-manpages-operator:latest
           sudo skopeo --insecure-policy copy \
-            "oci-archive:$(realpath ./upki-mirror_*.rock)" \
+            "oci-archive:$(realpath ./ubuntu-manpages_*.rock)" \
             "docker://ghcr.io/canonical/ubuntu-manpages-operator:latest" \
             --dest-creds "${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}"
