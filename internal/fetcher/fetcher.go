@@ -42,7 +42,7 @@ func New(archive string, repos []string, archs []string, pockets []string, workD
 		Archs:   archs,
 		Pockets: pockets,
 		WorkDir: workDir,
-		Client:  http.DefaultClient,
+		Client:  &http.Client{Timeout: 5 * time.Minute},
 	}
 }
 
