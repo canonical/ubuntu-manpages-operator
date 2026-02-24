@@ -466,6 +466,28 @@ type browseView struct {
 
 func (s *Server) handleManpages(w http.ResponseWriter, r *http.Request) {
 	clean := filepath.Clean(r.URL.Path)
+
+	// Redirect "latest" and "lts" aliases to the actual release codename.
+	parts := strings.SplitN(clean, "/", 4) // ["", "manpages", alias, ...]
+	if len(parts) >= 3 {
+		var target string
+		switch parts[2] {
+		case "latest":
+			target = s.cfg.LatestRelease()
+		case "lts":
+			target = s.cfg.LatestLTSRelease()
+		}
+		if target != "" {
+			parts[2] = target
+			dest := strings.Join(parts, "/")
+			if strings.HasSuffix(r.URL.Path, "/") && !strings.HasSuffix(dest, "/") {
+				dest += "/"
+			}
+			http.Redirect(w, r, dest, http.StatusFound)
+			return
+		}
+	}
+
 	fsPath := filepath.Join(s.cfg.PublicHTMLDir, clean)
 
 	// Serve plain text version of manpages for LLM consumption.

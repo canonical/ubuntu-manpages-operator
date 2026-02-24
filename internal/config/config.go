@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -68,6 +69,45 @@ func (c *Config) ReleaseKeys() []string {
 	copy(keys, c.Releases)
 	sort.Strings(keys)
 	return keys
+}
+
+// LatestRelease returns the codename of the release with the highest version.
+func (c *Config) LatestRelease() string {
+	var best string
+	var bestMaj, bestMin int
+	for name, ver := range c.ReleaseVersions {
+		maj, min := parseVersion(ver)
+		if best == "" || maj > bestMaj || (maj == bestMaj && min > bestMin) {
+			best, bestMaj, bestMin = name, maj, min
+		}
+	}
+	return best
+}
+
+// LatestLTSRelease returns the codename of the most recent LTS release.
+// LTS releases have an even major version and minor version "04".
+func (c *Config) LatestLTSRelease() string {
+	var best string
+	var bestMaj int
+	for name, ver := range c.ReleaseVersions {
+		maj, min := parseVersion(ver)
+		if min != 4 || maj%2 != 0 {
+			continue
+		}
+		if best == "" || maj > bestMaj {
+			best, bestMaj = name, maj
+		}
+	}
+	return best
+}
+
+func parseVersion(ver string) (maj, min int) {
+	parts := strings.Split(ver, ".")
+	if len(parts) == 2 {
+		maj, _ = strconv.Atoi(parts[0])
+		min, _ = strconv.Atoi(parts[1])
+	}
+	return
 }
 
 func envOrDefault(key, fallback string) string {

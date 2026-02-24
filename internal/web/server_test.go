@@ -655,6 +655,61 @@ func TestOtherVersionsBothExist(t *testing.T) {
 	}
 }
 
+func TestLatestRedirect(t *testing.T) {
+	srv, _ := testServer(t) // single release: noble 24.04
+
+	req := httptest.NewRequest(http.MethodGet, "/manpages/latest/man1/ls.1.html", nil)
+	w := httptest.NewRecorder()
+	srv.handleManpages(w, req)
+
+	resp := w.Result()
+	if resp.StatusCode != http.StatusFound {
+		t.Fatalf("expected 302, got %d", resp.StatusCode)
+	}
+	loc := resp.Header.Get("Location")
+	if loc != "/manpages/noble/man1/ls.1.html" {
+		t.Errorf("expected redirect to noble, got: %s", loc)
+	}
+}
+
+func TestLTSRedirect(t *testing.T) {
+	srv, cfg := testServer(t)
+
+	// Add a non-LTS release with a higher version.
+	cfg.Releases = append(cfg.Releases, "questing")
+	cfg.ReleaseVersions["questing"] = "25.10"
+
+	req := httptest.NewRequest(http.MethodGet, "/manpages/lts/man1/ls.1.html", nil)
+	w := httptest.NewRecorder()
+	srv.handleManpages(w, req)
+
+	resp := w.Result()
+	if resp.StatusCode != http.StatusFound {
+		t.Fatalf("expected 302, got %d", resp.StatusCode)
+	}
+	loc := resp.Header.Get("Location")
+	if loc != "/manpages/noble/man1/ls.1.html" {
+		t.Errorf("expected redirect to noble (LTS), got: %s", loc)
+	}
+}
+
+func TestLatestRedirectDirectory(t *testing.T) {
+	srv, _ := testServer(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/manpages/latest/", nil)
+	w := httptest.NewRecorder()
+	srv.handleManpages(w, req)
+
+	resp := w.Result()
+	if resp.StatusCode != http.StatusFound {
+		t.Fatalf("expected 302, got %d", resp.StatusCode)
+	}
+	loc := resp.Header.Get("Location")
+	if loc != "/manpages/noble/" {
+		t.Errorf("expected redirect to /manpages/noble/, got: %s", loc)
+	}
+}
+
 func TestGroupSearchResultsUnknownDistro(t *testing.T) {
 	results := []search.Result{
 		{Title: "foo", Path: "/manpages/unknown/man1/foo.1.html", Distro: "unknown", Section: 1},
