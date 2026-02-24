@@ -342,8 +342,10 @@ func (s *Server) logRequests(next http.Handler) http.Handler {
 func securityHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Security-Policy",
-			"default-src 'none'; script-src 'self'; style-src 'self' https://assets.ubuntu.com; "+
-				"img-src 'self' https://assets.ubuntu.com; font-src 'self' https://assets.ubuntu.com; "+
+			"default-src 'none'; script-src 'self'; "+
+				"style-src 'self' 'unsafe-inline' https://assets.ubuntu.com; "+
+				"img-src 'self' data: https://assets.ubuntu.com; "+
+				"font-src 'self' https://assets.ubuntu.com; "+
 				"frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("X-Frame-Options", "DENY")
