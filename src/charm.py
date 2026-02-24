@@ -42,34 +42,22 @@ class ManpagesCharm(ops.CharmBase):
         framework.observe(self.ingress.on.ready, self._on_config_changed)
         framework.observe(self.ingress.on.revoked, self._on_config_changed)
 
-    def _on_manpages_pebble_ready(self, event: ops.PebbleReadyEvent):
+    def _on_manpages_pebble_ready(self, _):
         """Add the manpages layer to Pebble and start the services."""
         self._replan_workload()
 
-    def _on_config_changed(self, event):
+    def _on_config_changed(self, _):
         """Update configuration and fetch relevant manpages."""
         self.unit.status = ops.MaintenanceStatus("Updating configuration")
         self._replan_workload()
 
     def _replan_workload(self):
         container = self._container
-
         try:
-            self._manpages.configure(str(self.config["releases"]), self._get_external_url())
-        except ValueError:
-            self.unit.status = ops.BlockedStatus(
-                "Invalid configuration. Check `juju debug-log` for details."
+            layer = self._manpages.pebble_layer(
+                str(self.config["releases"]), self._get_external_url()
             )
-            return
-        except (ProtocolError, ConnectionError, APIError) as e:
-            logger.error("failed to configure manpages app: %s", e)
-            self.unit.status = ops.BlockedStatus(
-                "Failed to connect to workload container. Check `juju debug-log` for details."
-            )
-            return
-
-        try:
-            container.add_layer("manpages", self._manpages.pebble_layer(), combine=True)
+            container.add_layer("manpages", layer, combine=True)
             container.replan()
         except (ConnectionError, ProtocolError, APIError) as e:
             logger.error("failed to add manpages layer to pebble: %s", e)
@@ -82,7 +70,7 @@ class ManpagesCharm(ops.CharmBase):
 
         self.unit.status = ops.MaintenanceStatus("Updating manpages")
         try:
-            self._manpages.update_manpages()
+            self._manpages.update_manpages(str(self.config["releases"]))
         except (ProtocolError, ConnectionError, APIError) as e:
             logger.error("failed to ingest manpages: %s", e)
             self.unit.status = ops.BlockedStatus(
@@ -90,16 +78,12 @@ class ManpagesCharm(ops.CharmBase):
             )
             return
 
-    def _on_update_status(self, event: ops.UpdateStatusEvent):
+    def _on_update_status(self, _):
         """Update status."""
-        self.unit.status = self._get_status()
-
-    def _get_status(self) -> ops.StatusBase:
-        """Return the current status of the unit."""
         if self._manpages.updating:
-            return ops.MaintenanceStatus("Updating manpages")
+            self.unit.status = ops.MaintenanceStatus("Updating manpages")
         else:
-            return ops.ActiveStatus()
+            self.unit.status = ops.ActiveStatus()
 
     def _get_external_url(self) -> str:
         """Report URL to access Ubuntu Manpages."""
