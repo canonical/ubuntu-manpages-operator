@@ -73,13 +73,6 @@ jobs:
         with:
           name: charm
 
-      - name: Temporary job to upload the charm file
-        env:
-          CHARMCRAFT_AUTH: "${{ secrets.CHARMHUB_TOKEN }}"
-        run: |
-          sudo snap install charmcraft --classic
-          charmcraft upload ${{ matrix.charm }} --release edge
-
       - name: Upload charm to charmhub
         uses: canonical/charming-actions/upload-charm@1753e0803f70445132e92acd45c905aba6473225 # 2.7.0
         with:
