@@ -15,7 +15,6 @@ import (
 	"github.com/canonical/ubuntu-manpages-operator/internal/launchpad"
 	"github.com/canonical/ubuntu-manpages-operator/internal/logging"
 	"github.com/canonical/ubuntu-manpages-operator/internal/pipeline"
-	"github.com/canonical/ubuntu-manpages-operator/internal/search"
 	"github.com/canonical/ubuntu-manpages-operator/internal/sitemap"
 	"github.com/canonical/ubuntu-manpages-operator/internal/storage"
 )
@@ -78,10 +77,6 @@ func ingest(logger *slog.Logger, releaseList, workDir string, forceProcess bool,
 	converter := pipeline.NewConverter("")
 	extractor := pipeline.NewDebExtractor(workDir)
 	storage := storage.NewFSStorage(cfg.PublicHTMLDir)
-	indexer, err := search.NewSQLiteIndexer(cfg.IndexPath())
-	if err != nil {
-		return err
-	}
 
 	sitemapGen := &sitemap.SitemapGenerator{
 		Root:    cfg.PublicHTMLDir,
@@ -94,7 +89,6 @@ func ingest(logger *slog.Logger, releaseList, workDir string, forceProcess bool,
 		Extractor:        extractor,
 		Converter:        converter,
 		Storage:          storage,
-		Indexer:          indexer,
 		SitemapGenerator: sitemapGen,
 		Logger:           logger,
 		FailuresDir:      cfg.PublicHTMLDir,

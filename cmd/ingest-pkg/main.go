@@ -117,7 +117,7 @@ func run(logger *slog.Logger, release, pkgName, workDir, output string) error {
 	var convertErrors int
 	for _, manpage := range manpages {
 		logger.Debug("processing", "path", manpage.RelativePath, "symlink", manpage.IsSymlink)
-		if err := pipeline.ProcessSingleManpage(ctx, release, manpage, converter, storage, nil); err != nil {
+		if err := pipeline.ProcessSingleManpage(ctx, release, manpage, converter, storage); err != nil {
 			var ce *pipeline.ConvertError
 			if errors.As(err, &ce) {
 				logger.Warn("convert failed", "path", manpage.RelativePath, "error", ce.Unwrap())

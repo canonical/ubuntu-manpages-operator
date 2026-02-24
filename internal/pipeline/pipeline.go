@@ -11,7 +11,6 @@ import (
 	"sync"
 
 	"github.com/canonical/ubuntu-manpages-operator/internal/fetcher"
-	"github.com/canonical/ubuntu-manpages-operator/internal/search"
 	"github.com/canonical/ubuntu-manpages-operator/internal/sitemap"
 	"github.com/canonical/ubuntu-manpages-operator/internal/storage"
 	"github.com/canonical/ubuntu-manpages-operator/internal/transform"
@@ -21,7 +20,6 @@ type Runner struct {
 	Fetcher          *fetcher.Fetcher
 	Extractor        *DebExtractor
 	Converter        *Converter
-	Indexer          search.Indexer
 	Storage          *storage.FSStorage
 	SitemapGenerator *sitemap.SitemapGenerator
 	Logger           *slog.Logger
@@ -62,12 +60,6 @@ func (r *Runner) Run(ctx context.Context, releases []string) error {
 	}
 
 	wg.Wait()
-
-	if r.Indexer != nil {
-		if err := r.Indexer.Close(); err != nil {
-			return fmt.Errorf("close indexer: %w", err)
-		}
-	}
 
 	if r.SitemapGenerator != nil {
 		if err := r.SitemapGenerator.Generate(ctx, releases); err != nil {
@@ -190,7 +182,7 @@ func (r *Runner) processManpage(ctx context.Context, idx int, release string, ma
 	if r.Logger != nil {
 		r.Logger.Debug("processing", "path", manpage.RelativePath, "symlink", manpage.IsSymlink)
 	}
-	err := ProcessSingleManpage(ctx, release, manpage, r.Converter, r.Storage, r.Indexer)
+	err := ProcessSingleManpage(ctx, release, manpage, r.Converter, r.Storage)
 	if err != nil {
 		var ce *ConvertError
 		if errors.As(err, &ce) {
@@ -205,7 +197,7 @@ func (r *Runner) processManpage(ctx context.Context, idx int, release string, ma
 // ProcessSingleManpage converts and stores a single manpage file using
 // the provided pipeline components. Conversion failures are returned as
 // *ConvertError so callers can decide whether they are fatal.
-func ProcessSingleManpage(ctx context.Context, release string, manpage ManpageFile, converter *Converter, storage *storage.FSStorage, indexer search.Indexer) error {
+func ProcessSingleManpage(ctx context.Context, release string, manpage ManpageFile, converter *Converter, storage *storage.FSStorage) error {
 	paths, err := ParseManpagePath(release, manpage.RelativePath)
 	if err != nil {
 		return fmt.Errorf("parse manpage path %s: %w", manpage.RelativePath, err)
@@ -245,21 +237,6 @@ func ProcessSingleManpage(ctx context.Context, release string, manpage ManpageFi
 
 	if err := storage.WriteHTML(ctx, paths.HTMLPath, tdoc.Body); err != nil {
 		return fmt.Errorf("write html %s: %w", paths.HTMLPath, err)
-	}
-
-	if indexer != nil {
-		content := transform.StripHTMLTags(string(tdoc.Body))
-		doc := search.Document{
-			Title:    tdoc.Title,
-			Path:     "/" + paths.HTMLPath,
-			Section:  paths.Section,
-			Distro:   release,
-			Language: paths.Language,
-			Content:  content,
-		}
-		if err := indexer.IndexManpage(ctx, doc); err != nil {
-			return fmt.Errorf("index manpage %s: %w", paths.HTMLPath, err)
-		}
 	}
 
 	content, err := os.ReadFile(manpage.Path)
