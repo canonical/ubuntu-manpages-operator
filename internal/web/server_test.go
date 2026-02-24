@@ -33,12 +33,13 @@ func testServer(t *testing.T) (*Server, *config.Config) {
 	}
 
 	cfg := &config.Config{
-		Site:          "https://manpages.ubuntu.com",
-		Archive:       "http://archive.ubuntu.com/ubuntu",
-		PublicHTMLDir: dir,
-		Releases:      map[string]string{"noble": "24.04"},
-		Repos:         []string{"main"},
-		Arch:          "amd64",
+		Site:            "https://manpages.ubuntu.com",
+		Archive:         "http://archive.ubuntu.com/ubuntu",
+		PublicHTMLDir:   dir,
+		Releases:        []string{"noble"},
+		ReleaseVersions: map[string]string{"noble": "24.04"},
+		Repos:           []string{"main"},
+		Arch:            "amd64",
 	}
 
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
@@ -590,7 +591,8 @@ func TestOtherVersionsOnlyExisting(t *testing.T) {
 	srv, cfg := testServer(t)
 
 	// Add a second release to config where the manpage does NOT exist on disk.
-	cfg.Releases["jammy"] = "22.04"
+	cfg.Releases = append(cfg.Releases, "jammy")
+	cfg.ReleaseVersions["jammy"] = "22.04"
 
 	// noble/man1/ls.1.html exists (created by testServer), but jammy does not.
 	req := httptest.NewRequest(http.MethodGet, "/manpages/noble/man1/ls.1.html", nil)
@@ -622,7 +624,8 @@ func TestOtherVersionsBothExist(t *testing.T) {
 	srv, cfg := testServer(t)
 
 	// Add jammy release with the same manpage on disk.
-	cfg.Releases["jammy"] = "22.04"
+	cfg.Releases = append(cfg.Releases, "jammy")
+	cfg.ReleaseVersions["jammy"] = "22.04"
 	jammyDir := filepath.Join(cfg.PublicHTMLDir, "manpages", "jammy", "man1")
 	if err := os.MkdirAll(jammyDir, 0o755); err != nil {
 		t.Fatal(err)
