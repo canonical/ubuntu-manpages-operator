@@ -40,7 +40,7 @@ type Server struct {
 	browsePage  *template.Template
 	manpagePage *template.Template
 	notFound    *template.Template
-	search      *search.SQLiteSearcher
+	search      search.Searcher
 }
 
 type manpageView struct {
@@ -116,10 +116,7 @@ func NewServer(cfg *config.Config, logger *slog.Logger) *Server {
 	browsePage := parse("templates/base.html", "templates/browse.html")
 	manpagePage := parse("templates/base.html", "templates/manpage.html")
 	notFound := parse("templates/base.html", "templates/404.html")
-	searcher, err := search.NewSQLiteSearcher(cfg.IndexPath())
-	if err != nil {
-		logger.Warn("search index unavailable", "error", err)
-	}
+	searcher := search.NewFSSearcher(cfg.PublicHTMLDir, cfg.ReleaseKeys())
 	return &Server{
 		cfg:         cfg,
 		logger:      logger,

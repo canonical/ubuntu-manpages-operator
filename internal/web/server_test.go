@@ -452,9 +452,8 @@ func TestHandleSearchPageEmpty(t *testing.T) {
 	}
 }
 
-func TestHandleSearchPageNoIndex(t *testing.T) {
+func TestHandleSearchPageWithResults(t *testing.T) {
 	srv, _ := testServer(t)
-	// search is nil by default in testServer (no index file).
 
 	req := httptest.NewRequest(http.MethodGet, "/search?q=ls", nil)
 	w := httptest.NewRecorder()
@@ -467,8 +466,11 @@ func TestHandleSearchPageNoIndex(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d", resp.StatusCode)
 	}
-	if !strings.Contains(text, "Search is unavailable") {
-		t.Error("expected unavailable message when search index is nil")
+	if strings.Contains(text, "Search is unavailable") {
+		t.Error("filesystem search should always be available")
+	}
+	if !strings.Contains(text, "found.") {
+		t.Error("expected search results for 'ls'")
 	}
 }
 
