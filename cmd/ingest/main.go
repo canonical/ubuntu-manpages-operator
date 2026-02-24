@@ -7,10 +7,12 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/canonical/ubuntu-manpages-operator/internal/config"
 	"github.com/canonical/ubuntu-manpages-operator/internal/fetcher"
+	"github.com/canonical/ubuntu-manpages-operator/internal/launchpad"
 	"github.com/canonical/ubuntu-manpages-operator/internal/logging"
 	"github.com/canonical/ubuntu-manpages-operator/internal/pipeline"
 	"github.com/canonical/ubuntu-manpages-operator/internal/search"
@@ -19,7 +21,6 @@ import (
 )
 
 func main() {
-	configPath := flag.String("config", config.DefaultPath(), "Path to config JSON")
 	logLevel := flag.String("log-level", "info", "Log level (debug, info, warn, error)")
 	release := flag.String("release", "", "Comma-separated list of releases to ingest")
 	workdir := flag.String("workdir", "", "Working directory for downloads/extraction")
@@ -29,17 +30,24 @@ func main() {
 
 	logger := logging.BuildLogger(*logLevel)
 
-	if err := ingest(logger, *configPath, *release, *workdir, *force, *output); err != nil {
+	if err := ingest(logger, *release, *workdir, *force, *output); err != nil {
 		logger.Error("ingest failed", "error", err)
 		os.Exit(1)
 	}
 }
 
-func ingest(logger *slog.Logger, configPath, releaseList, workDir string, forceProcess bool, output string) error {
-	cfg, err := config.Load(configPath)
-	if err != nil {
-		return fmt.Errorf("load config: %w", err)
+func ingest(logger *slog.Logger, releaseList, workDir string, forceProcess bool, output string) error {
+	cfg := config.Load()
+	if err := cfg.Validate(); err != nil {
+		return fmt.Errorf("invalid config: %w", err)
 	}
+
+	lp := launchpad.NewHTTPClient(nil)
+	versions, err := lp.ReleaseMap(cfg.Releases)
+	if err != nil {
+		return fmt.Errorf("resolve release versions: %w", err)
+	}
+	cfg.ReleaseVersions = versions
 
 	if output != "" {
 		cfg.PublicHTMLDir = output
@@ -113,7 +121,7 @@ func resolveReleases(cfg *config.Config, releaseList string) ([]string, error) {
 		if release == "" {
 			return nil, errInvalidRelease
 		}
-		if _, ok := cfg.Releases[release]; !ok {
+		if !slices.Contains(cfg.Releases, release) {
 			return nil, errInvalidRelease
 		}
 	}

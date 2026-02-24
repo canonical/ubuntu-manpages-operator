@@ -7,16 +7,17 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"slices"
 
 	"github.com/canonical/ubuntu-manpages-operator/internal/config"
 	"github.com/canonical/ubuntu-manpages-operator/internal/fetcher"
+	"github.com/canonical/ubuntu-manpages-operator/internal/launchpad"
 	"github.com/canonical/ubuntu-manpages-operator/internal/logging"
 	"github.com/canonical/ubuntu-manpages-operator/internal/pipeline"
 	"github.com/canonical/ubuntu-manpages-operator/internal/storage"
 )
 
 func main() {
-	configPath := flag.String("config", config.DefaultPath(), "Path to config JSON")
 	logLevel := flag.String("log-level", "debug", "Log level (debug, info, warn, error)")
 	release := flag.String("release", "", "Release to ingest from (required)")
 	pkgName := flag.String("package", "", "Package name to process (required)")
@@ -32,23 +33,30 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := run(logger, *configPath, *release, *pkgName, *workdir, *output); err != nil {
+	if err := run(logger, *release, *pkgName, *workdir, *output); err != nil {
 		logger.Error("ingest-pkg failed", "error", err)
 		os.Exit(1)
 	}
 }
 
-func run(logger *slog.Logger, configPath, release, pkgName, workDir, output string) error {
-	cfg, err := config.Load(configPath)
-	if err != nil {
-		return fmt.Errorf("load config: %w", err)
+func run(logger *slog.Logger, release, pkgName, workDir, output string) error {
+	cfg := config.Load()
+	if err := cfg.Validate(); err != nil {
+		return fmt.Errorf("invalid config: %w", err)
 	}
+
+	lp := launchpad.NewHTTPClient(nil)
+	versions, err := lp.ReleaseMap(cfg.Releases)
+	if err != nil {
+		return fmt.Errorf("resolve release versions: %w", err)
+	}
+	cfg.ReleaseVersions = versions
 
 	if output != "" {
 		cfg.PublicHTMLDir = output
 	}
 
-	if _, ok := cfg.Releases[release]; !ok {
+	if !slices.Contains(cfg.Releases, release) {
 		return fmt.Errorf("unknown release %q (available: %v)", release, cfg.ReleaseKeys())
 	}
 

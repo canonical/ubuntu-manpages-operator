@@ -6,23 +6,31 @@ import (
 	"os"
 
 	"github.com/canonical/ubuntu-manpages-operator/internal/config"
+	"github.com/canonical/ubuntu-manpages-operator/internal/launchpad"
 	"github.com/canonical/ubuntu-manpages-operator/internal/logging"
 	"github.com/canonical/ubuntu-manpages-operator/internal/web"
 )
 
 func main() {
-	configPath := flag.String("config", config.DefaultPath(), "Path to config JSON")
 	logLevel := flag.String("log-level", "info", "Log level (debug, info, warn, error)")
 	addr := flag.String("addr", ":8080", "HTTP bind address")
 	flag.Parse()
 
 	logger := logging.BuildLogger(*logLevel)
 
-	cfg, err := config.Load(*configPath)
-	if err != nil {
-		logger.Error("load config", "error", err)
+	cfg := config.Load()
+	if err := cfg.Validate(); err != nil {
+		logger.Error("invalid config", "error", err)
 		os.Exit(1)
 	}
+
+	lp := launchpad.NewHTTPClient(nil)
+	versions, err := lp.ReleaseMap(cfg.Releases)
+	if err != nil {
+		logger.Error("resolve release versions", "error", err)
+		os.Exit(1)
+	}
+	cfg.ReleaseVersions = versions
 
 	server := web.NewServer(cfg, logger)
 	if err := server.ListenAndServe(*addr); err != nil {
