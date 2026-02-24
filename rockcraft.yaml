@@ -18,7 +18,7 @@ services:
   manpages:
     override: replace
     startup: enabled
-    command: /usr/bin/server -config /app/www/config.json
+    command: /usr/bin/server
 
 parts:
   manpages-app:
