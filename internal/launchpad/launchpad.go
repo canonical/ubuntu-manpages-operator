@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
+	"time"
 )
 
 const defaultBaseURL = "https://api.launchpad.net/1.0"
@@ -24,7 +25,7 @@ type HTTPClient struct {
 // http.DefaultClient is used.
 func NewHTTPClient(httpClient *http.Client) *HTTPClient {
 	if httpClient == nil {
-		httpClient = http.DefaultClient
+		httpClient = &http.Client{Timeout: 30 * time.Second}
 	}
 	return &HTTPClient{
 		BaseURL:    defaultBaseURL,
