@@ -17,14 +17,12 @@ from ops.testing import ActiveStatus, Context, MaintenanceStatus, State, TCPPort
 from scenario import Container
 
 from charm import ManpagesCharm
-from launchpad import MockLaunchpadClient
 from manpages import Manpages
 
 
 @pytest.fixture
 def charm():
-    with mock.patch("charm.LaunchpadClient", return_value=MockLaunchpadClient()):
-        yield ManpagesCharm
+    yield ManpagesCharm
 
 
 @pytest.fixture

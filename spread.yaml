@@ -80,13 +80,6 @@ suites:
         apt autoremove -y --purge
       fi
 
-  tests/spread/functional/:
-    summary: Spread tests - functional tests
-    prepare-each: |
-      sudo apt update
-      sudo apt install -y make
-      sudo snap install --classic astral-uv
-
 exclude:
   - .coverage
   - .github

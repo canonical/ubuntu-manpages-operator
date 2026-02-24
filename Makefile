@@ -28,7 +28,6 @@ unit:
 		--source=$(SRC) \
 		-m pytest \
 		--ignore=$(TESTS)/integration \
-		--ignore=$(TESTS)/functional \
 		--tb native \
 		-v \
 		-s \
@@ -43,19 +42,6 @@ integration:
 		-s \
 		--tb native \
 		--ignore=$(TESTS)/unit \
-		--ignore=$(TESTS)/functional \
-		--log-cli-level=INFO \
-		$(ARGS)
-
-functional:
-	uv run --all-extras \
-		pytest \
-		-v \
-		-x \
-		-s \
-		--tb native \
-		--ignore=$(TESTS)/unit \
-		--ignore=$(TESTS)/integration \
 		--log-cli-level=INFO \
 		$(ARGS)
 

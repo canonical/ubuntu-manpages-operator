@@ -11,7 +11,6 @@ import ops
 from charms.traefik_k8s.v2.ingress import IngressPerAppRequirer as IngressRequirer
 from ops.pebble import APIError, ConnectionError, ProtocolError
 
-from launchpad import LaunchpadClient
 from manpages import PORT, Manpages
 
 logger = logging.getLogger(__name__)
@@ -25,7 +24,7 @@ class ManpagesCharm(ops.CharmBase):
         framework.observe(self.on.manpages_pebble_ready, self._on_manpages_pebble_ready)
 
         self._container = self.unit.get_container("manpages")
-        self._manpages = Manpages(LaunchpadClient(), self._container)
+        self._manpages = Manpages(self._container)
 
         self.ingress = IngressRequirer(
             self,
