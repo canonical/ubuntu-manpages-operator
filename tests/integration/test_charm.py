@@ -34,10 +34,7 @@ def test_application_is_up(juju: jubilant.Juju):
     address = juju.status().apps[MANPAGES].units[f"{MANPAGES}/0"].address
     response = requests.get(f"http://{address}:8080")
     assert response.status_code == 200
-    assert (
-        '<meta name="description" content="Hundreds of thousands of manpages from every package of every supported Ubuntu release, rendered as browsable HTML." />'
-        in response.text
-    )
+    assert "<title>Ubuntu Manpages</title>" in response.text
 
 
 @retry(retry_num=10, retry_sleep_sec=3)

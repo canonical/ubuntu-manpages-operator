@@ -26,7 +26,7 @@ class Manpages:
     def __init__(self, container: ops.Container):
         self.container = container
 
-    def pebble_layer(self, releases, external_url) -> ops.pebble.Layer:
+    def pebble_layer(self, releases) -> ops.pebble.Layer:
         """Return a Pebble layer for managing manpages server and ingestion."""
         # Validate the releases string before building the layer
         releases_list = RELEASES_PATTERN.findall(releases)
@@ -40,7 +40,7 @@ class Manpages:
         }
         app_config = {
             "MANPAGES_RELEASES": releases,
-            "MANPAGES_EXTERNAL_URL": external_url,
+            "MANPAGES_EXTERNAL_URL": "https://manpages.ubuntu.com",
             "MANPAGES_ARCHIVE": "http://archive.ubuntu.com/ubuntu",
             "MANPAGES_PUBLIC_HTML_DIR": str(WWW_DIR),
             "MANPAGES_REPOS": "main, restricted, universe, multiverse",

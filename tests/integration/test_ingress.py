@@ -55,7 +55,4 @@ def test_ingress_functions_correctly(juju: jubilant.Juju, traefik_lb_ip):
     )
 
     assert response.status_code == 200
-    assert (
-        '<meta name="description" content="Hundreds of thousands of manpages from every package of every supported Ubuntu release, rendered as browsable HTML." />'
-        in response.text
-    )
+    assert "<title>Ubuntu Manpages</title>" in response.text

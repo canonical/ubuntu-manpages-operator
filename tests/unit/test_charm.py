@@ -43,9 +43,7 @@ def test_manpages_pebble_ready(loaded_ctx):
 
     result = ctx.run(ctx.on.pebble_ready(container=container), state)
 
-    assert result.get_container("manpages").layers["manpages"] == manpages.pebble_layer(
-        "noble", "http://192.0.2.0:8080"
-    )
+    assert result.get_container("manpages").layers["manpages"] == manpages.pebble_layer("noble")
     assert result.get_container("manpages").service_statuses == {
         "manpages": ServiceStatus.ACTIVE,
         "ingest": ServiceStatus.ACTIVE,
