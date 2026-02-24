@@ -154,8 +154,18 @@ func (s *Server) ListenAndServe(addr string) error {
 	sitemapDir := filepath.Join(s.cfg.PublicHTMLDir, "sitemaps")
 	mux.Handle("/sitemaps/", http.StripPrefix("/sitemaps/", http.FileServer(http.Dir(sitemapDir))))
 
+	srv := &http.Server{
+		Addr:              addr,
+		Handler:           s.logRequests(gzipHandler(mux)),
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      60 * time.Second,
+		IdleTimeout:       120 * time.Second,
+		MaxHeaderBytes:    1 << 20, // 1 MB
+	}
+
 	s.logger.Info("listening", "addr", addr)
-	return http.ListenAndServe(addr, s.logRequests(gzipHandler(mux)))
+	return srv.ListenAndServe()
 }
 
 func (s *Server) handleSearchPage(w http.ResponseWriter, r *http.Request) {
