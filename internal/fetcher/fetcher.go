@@ -177,7 +177,8 @@ func (f *Fetcher) FetchDeb(ctx context.Context, debURL string) (string, error) {
 			}
 			tmpPath := tmp.Name()
 
-			if _, err := io.Copy(tmp, resp.Body); err != nil {
+			const maxDebSize = 1024 * 1024 * 1024 // 1024 MB
+			if _, err := io.Copy(tmp, io.LimitReader(resp.Body, maxDebSize)); err != nil {
 				_ = tmp.Close()
 				_ = os.Remove(tmpPath)
 				return fmt.Errorf("write deb file: %w", err)

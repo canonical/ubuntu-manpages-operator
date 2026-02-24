@@ -25,7 +25,7 @@ type Config struct {
 func Load() *Config {
 	cfg := &Config{
 		Site:          envOrDefault("MANPAGES_SITE", "https://manpages.ubuntu.com"),
-		Archive:       envOrDefault("MANPAGES_ARCHIVE", "http://archive.ubuntu.com/ubuntu"),
+		Archive:       envOrDefault("MANPAGES_ARCHIVE", "https://archive.ubuntu.com/ubuntu"),
 		PublicHTMLDir: envOrDefault("MANPAGES_PUBLIC_HTML_DIR", "/app/www"),
 		Releases:      splitCSV(envOrDefault("MANPAGES_RELEASES", "trusty, xenial, bionic, jammy, noble, plucky, questing")),
 		Repos:         splitCSV(envOrDefault("MANPAGES_REPOS", "main, restricted, universe, multiverse")),
