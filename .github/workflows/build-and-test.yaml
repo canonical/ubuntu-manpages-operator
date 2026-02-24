@@ -40,10 +40,12 @@ jobs:
         with:
           go-version-file: "go.mod"
       - name: Build
+        env:
+          CGO_ENABLED: "0"
         run: |
-          go build -o bin/ingest ./cmd/ingest
-          go build -o bin/server ./cmd/server
-          go build -o bin/ingest-pkg ./cmd/ingest-pkg
+          go build -trimpath -ldflags="-s -w" -o bin/ingest ./cmd/ingest
+          go build -trimpath -ldflags="-s -w" -o bin/server ./cmd/server
+          go build -trimpath -ldflags="-s -w" -o bin/ingest-pkg ./cmd/ingest-pkg
       - name: Test
         run: |
           go test -v -race ./...

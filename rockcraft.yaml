@@ -26,12 +26,17 @@ parts:
     source: .
     build-snaps:
       - go/1.25/stable
-    stage:
-      - bin/ingest
-      - bin/server
+    build-environment:
+      - CGO_ENABLED: "0"
+    override-build: |
+      go build -trimpath -ldflags="-s -w" -o "${CRAFT_PART_INSTALL}/bin/ingest" ./cmd/ingest
+      go build -trimpath -ldflags="-s -w" -o "${CRAFT_PART_INSTALL}/bin/server" ./cmd/server
     organize:
-      ingest: usr/bin/ingest
-      server: usr/bin/server
+      bin/ingest: usr/bin/ingest
+      bin/server: usr/bin/server
+    stage:
+      - usr/bin/ingest
+      - usr/bin/server
 
   mandoc:
     plugin: nil
