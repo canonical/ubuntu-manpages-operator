@@ -535,7 +535,7 @@ func (s *Server) handleManpages(w http.ResponseWriter, r *http.Request) {
 		href := "/" + strings.Join(segments[:i+1], "/") + "/"
 		label := segments[i]
 		if i == 1 {
-			if ver, ok := s.cfg.Releases[label]; ok {
+			if ver, ok := s.cfg.ReleaseVersions[label]; ok {
 				label = label + " (" + ver + ")"
 			}
 		} else if strings.HasPrefix(label, "man") {
@@ -716,15 +716,11 @@ func (s *Server) buildManpageBreadcrumbs(segments []string) []breadcrumb {
 }
 
 func buildIndexView(cfg *config.Config) indexView {
-	labels := make([]indexRelease, 0, len(cfg.Releases))
-	keys := make([]string, 0, len(cfg.Releases))
-	for key := range cfg.Releases {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
+	keys := cfg.ReleaseKeys()
+	labels := make([]indexRelease, 0, len(keys))
 
 	for _, key := range keys {
-		label := cfg.Releases[key]
+		label := cfg.ReleaseVersions[key]
 		parts := strings.Split(label, ".")
 		maj, _ := strconv.Atoi(parts[0])
 		if len(parts) == 2 && parts[1] == "04" && maj%2 == 0 {
@@ -778,7 +774,7 @@ Append .txt to any manpage URL for plain text output suitable for LLM consumptio
 `, siteURL)
 
 	for _, key := range s.cfg.ReleaseKeys() {
-		_, _ = fmt.Fprintf(w, "- %s (%s)\n", key, s.cfg.Releases[key])
+		_, _ = fmt.Fprintf(w, "- %s (%s)\n", key, s.cfg.ReleaseVersions[key])
 	}
 
 	_, _ = fmt.Fprintf(w, `
@@ -831,7 +827,7 @@ This strips all HTML markup and returns the content as text/plain, suitable for 
 `, siteURL)
 
 	for _, key := range s.cfg.ReleaseKeys() {
-		_, _ = fmt.Fprintf(w, "- %s (%s)\n", key, s.cfg.Releases[key])
+		_, _ = fmt.Fprintf(w, "- %s (%s)\n", key, s.cfg.ReleaseVersions[key])
 	}
 
 	_, _ = fmt.Fprintf(w, `
