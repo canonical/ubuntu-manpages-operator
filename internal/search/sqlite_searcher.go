@@ -40,7 +40,7 @@ func (s *SQLiteSearcher) Search(ctx context.Context, queryString string, distro 
 	if queryString == "" {
 		return SearchResponse{}, nil
 	}
-	if limit <= 0 {
+	if limit <= 0 || limit > 200 {
 		limit = 50
 	}
 
