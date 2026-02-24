@@ -28,8 +28,3 @@ scripts/
 
 # Go module cache
 /pkg/mod/
-
-# Binary files 
-ingest
-ingest-pkg
-server
