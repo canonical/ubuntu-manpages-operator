@@ -76,32 +76,3 @@
 </div>
 {{ end }}
 
-{{ define "scripts" }}
-{{ if .Query }}
-<script>
-  var input = document.querySelector("#search-docs .p-search-box__input");
-  if (input) input.value = {{ .Query }};
-</script>
-{{ end }}
-{{ if and .Query (gt (len .ResultGroups) 1) }}
-<script>
-  document.querySelectorAll("[role='tab']").forEach(function (tab) {
-    tab.addEventListener("click", function () {
-      var id = this.id;
-      document.querySelectorAll("[role='tab']").forEach(function (t) {
-        var active = t.id === id;
-        t.setAttribute("aria-selected", active);
-        t.tabIndex = active ? 0 : -1;
-      });
-      document.querySelectorAll("[role='tabpanel']").forEach(function (p) {
-        if (p.getAttribute("aria-labelledby") === id) {
-          p.removeAttribute("hidden");
-        } else {
-          p.setAttribute("hidden", "hidden");
-        }
-      });
-    });
-  });
-</script>
-{{ end }}
-{{ end }}
