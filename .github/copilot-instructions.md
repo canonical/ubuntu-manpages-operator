@@ -218,49 +218,7 @@ The charm integrates with `traefik-k8s` via the `ingress` relation (using `traef
 
 ## Development Workflow
 
-```bash
-# Install uv if not already present
-# https://github.com/astral-sh/uv
-
-# Format code
-make format
-
-# Lint
-make lint
-
-# Run unit tests
-make unit
-```
-
-Go tests are standard `_test.go` files alongside source. The `launchpad` package provides a `FakeClient` for tests.
-
-### Integration Tests
-
-Integration tests deploy the charm into a real Juju model. They use `spread` + `concierge` to provision test VMs:
-
-```bash
-# List available tests
-spread -list lxd:
-
-# Run all integration tests
-spread -v lxd:
-
-# Run a specific test
-spread -v lxd:ubuntu-24.04:tests/spread/integration/deploy-charm:juju_3_6
-
-# Debug failing tests (drops into shell on failure)
-spread -v --debug lxd:ubuntu-24.04:tests/spread/integration/
-```
-
-### Building
-
-```bash
-# Build the charm
-charmcraft pack --verbose
-
-# Build the OCI image
-rockcraft pack --verbose
-```
+See [CONTRIBUTING.md](../CONTRIBUTING.md) for development workflow, build instructions, and test commands.
 
 ---
 
@@ -282,8 +240,8 @@ rockcraft pack --verbose
 | Run unit tests      | `make unit`                                                 |
 | Lint                | `make lint`                                                 |
 | Format              | `make format`                                               |
-| Build charm         | `charmcraft pack --verbose`                                 |
-| Build OCI image     | `rockcraft pack --verbose`                                  |
+| Build charm         | `charmcraft pack`                                           |
+| Build OCI image     | `rockcraft pack`                                            |
 | Local server        | `go run ./cmd/server`                                       |
 | Ingest all releases | `go run ./cmd/ingest`                                       |
 | Ingest one release  | `MANPAGES_RELEASES=noble go run ./cmd/ingest`               |

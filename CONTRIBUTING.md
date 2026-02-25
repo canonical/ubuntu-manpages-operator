@@ -16,7 +16,68 @@ this operator.
 - Please help us out in ensuring easy to review branches by rebasing your pull request branch onto
   the `main` branch. This also avoids merge commits and creates a linear Git commit history.
 
-## Developing
+## Before submitting
+
+Before opening a pull request, please ensure:
+
+1. **Format and lint**: `make format; make lint`
+2. **Go tests pass**: `go test ./...`
+3. **Charm unit tests pass**: `make unit`
+4. **Test coverage** is updated if you've added or changed functionality
+5. **`README.md` is updated** if the change adds, removes, or renames CLI commands, environment variables, or user-facing features
+6. Use [Conventional Commits](https://www.conventionalcommits.org/) format for commit messages
+
+## Go development
+
+### Prerequisites
+
+- Go 1.24+ (`go version`)
+- `mandoc` — install with `apt install mandoc`
+
+### Building
+
+```bash
+go build -o bin/server ./cmd/server
+go build -o bin/ingest ./cmd/ingest
+go build -o bin/ingest-pkg ./cmd/ingest-pkg
+```
+
+### Running locally
+
+```bash
+cp .env.example .env   # edit as needed
+./bin/server            # requires manpages to be ingested first
+```
+
+### Ingesting manpages
+
+```bash
+# Ingest all configured releases
+./bin/ingest
+
+# Ingest a single release
+MANPAGES_RELEASES=noble ./bin/ingest
+
+# Force reprocessing (ignore SHA1 cache)
+MANPAGES_FORCE=true ./bin/ingest
+
+# Ingest a single package (for debugging)
+./bin/ingest-pkg -release noble -package coreutils
+```
+
+### Tests
+
+```bash
+go test ./...
+```
+
+### Building the OCI image
+
+```bash
+rockcraft pack
+```
+
+## Charm development (Python)
 
 This project uses [`uv`](https://github.com/astral-sh/uv) for managing dependencies and virtual
 environments.
@@ -53,49 +114,54 @@ Actions runner or development VM).
 To show the available integration tests, you can:
 
 ```bash
-❯ charmcraft test --list lxd:
-lxd:ubuntu-24.04:tests/spread/integration/deploy-charm:juju_3_6
+❯ spread -list lxd:
 ```
 
 From there, you can either run all of the tests, or a selection:
 
 ```bash
 # Run all of the tests
-❯ charmcraft test -v lxd:
+❯ spread -v lxd:
 
 # Run a particular test
-❯ charmcraft test -v lxd:ubuntu-24.04:tests/spread/integration/deploy-charm:juju_3_6
+❯ spread -v lxd:ubuntu-24.04:tests/spread/integration/deploy-charm:juju_3_6
 ```
 
 To run any of the tests on a locally provisioned machine, use the `github-ci` backend, e.g.
 
 ```bash
 # List available tests
-❯ charmcraft test --list github-ci:
+❯ spread -list github-ci:
 
 # Run all of the tests
-❯ charmcraft test -v github-ci:
+❯ spread -v github-ci:
 
 # Run a particular test
-❯ charmcraft test -v github-ci:ubuntu-24.04:tests/spread/integration/deploy-charm:juju_3_6
+❯ spread -v github-ci:ubuntu-24.04:tests/spread/integration/deploy-charm:juju_3_6
 ```
 
 ### Troubleshooting Failing Tests
 
-If you're working on a test that's failing, you can use `spread` to get an interactive shell inside the test environment on failure, which allows for easier debugging. To enable this, add `--debug` to your `charmcraft test` commands. For example:
+If you're working on a test that's failing, you can use `spread` to get an interactive shell inside the test environment on failure, which allows for easier debugging. To enable this, add `--debug` to your `spread` commands. For example:
 
 ```bash
-❯ charmcraft test -v --debug lxd:ubuntu-24.04:tests/spread/integration/
+❯ spread -v --debug lxd:ubuntu-24.04:tests/spread/integration/
 ```
 
 If the above tests were to fail, you'd be dropped into an interactive shell before the machine is reaped.
 
-## Build charm
+## Building artefacts
 
-Build the charm in this git repository using:
+Build the charm:
 
 ```bash
 charmcraft pack
+```
+
+Build the OCI image:
+
+```bash
+rockcraft pack
 ```
 
 ### Deploy
