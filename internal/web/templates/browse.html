@@ -81,7 +81,7 @@
         <span class="u-text--muted">Per page:</span>
         <select id="browse-per-page" class="mp-per-page__select" data-path="{{ .PagePath }}">
           {{ range .PerPageOptions }}
-          <option value="{{ . }}" {{ if eq . $.PerPage }} selected{{ end }}>{{ . }}</option>
+          <option value="{{ . }}"{{ if eq . $.PerPage }} selected{{ end }}>{{ . }}</option>
           {{ end }}
         </select>
         <span class="u-text--muted">({{ .FileCount }} manpages)</span>

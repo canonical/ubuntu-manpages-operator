@@ -11,82 +11,183 @@
 <meta property="og:url" content="{{ .SiteURL }}" />
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="Ubuntu Manpages" />
-{{ .JSONLD }} {{ end }} {{ define "page-title" }}
-<div class="l-docs__title" id="main-content"></div>
-{{ end }} {{ define "main" }}
+{{ .JSONLD }} {{ end }} {{ define "main" }}
+
+<!-- Hero -->
 <section class="p-section--hero">
-  <div class="row">
-    <div class="col-12">
+  <div class="row--50-50">
+    <div class="col">
       <h1>Ubuntu Manpage Repository</h1>
+    </div>
+    <div class="col">
       <p>
-        This site contains hundreds of thousands of manpages, extracted from every package of every
-        supported version of Ubuntu. Traditionally manpages are browsed on the command line — this
-        project renders them into a web-browsable format.
+        Hundreds of thousands of manpages from every package of every supported version of Ubuntu,
+        rendered as browsable HTML. Pulled directly from the Ubuntu archive and refreshed
+        regularly.
+      </p>
+      <div class="p-cta-block">
+        <a class="p-button--positive" href="/search">Search manpages</a>
+        <a class="p-button" href="/manpages">Browse all releases</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Find a manpage -->
+<section class="p-section">
+  <hr class="is-fixed-width p-rule" />
+  <div class="row--50-50">
+    <div class="col">
+      <h2>Find a manpage</h2>
+    </div>
+    <div class="col">
+      <form class="p-search-box" style="margin-top: 1rem" method="get" action="/search">
+        {{ template "search-inputs" . }}
+      </form>
+      <p class="u-text--muted">
+        Try
+        <a href="/search?q=ls">ls</a>, <a href="/search?q=grep">grep</a>,
+        <a href="/search?q=systemd">systemd</a>, or
+        <a href="/search?q=apt">apt</a>
       </p>
     </div>
   </div>
 </section>
 
+<!-- Browse by release -->
 <section class="p-section">
-  <div class="row">
-    <div class="mp-feature-grid">
-      <div class="mp-feature-card">
-        <h3 class="p-heading--5">Built from packages</h3>
-        <p>Manpages are pulled directly from Ubuntu archives and refreshed regularly.</p>
-      </div>
-      <div class="mp-feature-card">
-        <h3 class="p-heading--5">Web-friendly</h3>
-        <p>Readable typography, anchored sections, and deep links for sharing.</p>
-      </div>
-      <div class="mp-feature-card">
-        <h3 class="p-heading--5">Open source</h3>
-        <p>Powered by the Ubuntu Manpage Operator. Contribute improvements on GitHub.</p>
+  <hr class="is-fixed-width p-rule" />
+  <div class="row--50-50">
+    <div class="col">
+      <h2>Browse by release</h2>
+    </div>
+    <div class="col">
+      <div class="row">
+        <div class="col-3">
+          <ul class="p-list--divided">
+            {{ range $i, $r := .Releases }}{{ if even $i }}
+            <li class="p-list__item">
+              <a href="/manpages/{{ $r.Name }}">{{ $r.Label }} ({{ $r.Name }})</a>
+            </li>
+            {{ end }}{{ end }}
+          </ul>
+        </div>
+        <div class="col-3">
+          <ul class="p-list--divided">
+            {{ range $i, $r := .Releases }}{{ if not (even $i) }}
+            <li class="p-list__item">
+              <a href="/manpages/{{ $r.Name }}">{{ $r.Label }} ({{ $r.Name }})</a>
+            </li>
+            {{ end }}{{ end }}
+          </ul>
+        </div>
       </div>
     </div>
   </div>
 </section>
 
+<!-- Key features -->
 <section class="p-section">
-  <div class="row">
-    <div class="col-12">
-      <h2 class="p-heading--4">Browse by release</h2>
+  <hr class="is-fixed-width p-rule" />
+  <div class="u-fixed-width">
+    <div class="p-section--shallow">
+      <h2>What's included</h2>
     </div>
   </div>
   <div class="row">
-    <div class="col-12">
-      <div class="mp-release-grid">
-        {{ range .Releases }}
-        <a class="mp-release-card" href="/manpages/{{ .Name }}">
-          <span class="mp-release-card__version">{{ .Label }}</span>
-          <span class="mp-release-card__codename">{{ .Name }}</span>
-        </a>
-        {{ end }}
+    <div class="col-start-large-4 col-9">
+      <hr class="p-rule--muted u-hide--small" />
+      <div class="row">
+        <div class="col-3 col-medium-2">
+          <h3 class="p-heading--5">Every release</h3>
+          <p>
+            Manpages from every supported Ubuntu release, from previous LTS releases to the latest
+            development series.
+          </p>
+        </div>
+        <div class="col-3 col-medium-2">
+          <h3 class="p-heading--5">Every repository</h3>
+          <p>
+            Covers <code>main</code>, <code>restricted</code>, <code>universe</code>, and
+            <code>multiverse</code>, not just the packages installed by default.
+          </p>
+        </div>
+        <div class="col-3 col-medium-2">
+          <h3 class="p-heading--5">Structured HTML</h3>
+          <p>
+            Converted from roff source using <code>mandoc</code>, with table of contents,
+            cross-references, and section anchors.
+          </p>
+        </div>
+      </div>
+      <hr class="p-rule--muted u-hide--small" />
+      <div class="row">
+        <div class="col-3 col-medium-2">
+          <h3 class="p-heading--5">Searchable</h3>
+          <p>Find any command, library, or configuration file by name across all releases.</p>
+        </div>
+        <div class="col-3 col-medium-2">
+          <h3 class="p-heading--5">Always current</h3>
+          <p>
+            Pulled directly from the Ubuntu archive and refreshed regularly to include security and
+            stable updates.
+          </p>
+        </div>
+        <div class="col-3 col-medium-2">
+          <h3 class="p-heading--5">Plain text</h3>
+          <p>
+            Every manpage is also available as a <code>.txt</code> endpoint for scripted
+            consumption.
+          </p>
+        </div>
       </div>
     </div>
   </div>
 </section>
 
-<section class="p-section">
-  <div class="row">
-    <div class="col-12">
-      <h2 class="p-heading--4">Other resources</h2>
+<!-- Resources -->
+<section class="p-section--deep">
+  <hr class="is-fixed-width p-rule" />
+  <div class="row--50-50">
+    <div class="col">
+      <h2>Other resources</h2>
     </div>
-  </div>
-  <div class="row">
-    <div class="col-6">
-      <h3 class="p-heading--5">Ubuntu documentation</h3>
-      <ul class="p-list">
-        <li class="p-list__item"><a href="https://docs.ubuntu.com/">User documentation</a></li>
-        <li class="p-list__item">
-          <a href="https://documentation.ubuntu.com/project/community/">Community documentation</a>
-        </li>
-        <li class="p-list__item">
-          <a href="https://documentation.ubuntu.com/ubuntu-for-developers/"
-            >Developer documentation</a
-          >
-        </li>
-      </ul>
+    <div class="col">
+      <div class="row">
+        <div class="col-3">
+          <h3 class="p-heading--5">Ubuntu documentation</h3>
+          <ul class="p-list--divided">
+            <li class="p-list__item">
+              <a href="https://docs.ubuntu.com/">User documentation</a>
+            </li>
+            <li class="p-list__item">
+              <a href="https://documentation.ubuntu.com/project/community/"
+                >Community documentation</a
+              >
+            </li>
+            <li class="p-list__item">
+              <a href="https://documentation.ubuntu.com/ubuntu-for-developers/"
+                >Developer documentation</a
+              >
+            </li>
+          </ul>
+        </div>
+        <div class="col-3">
+          <h3 class="p-heading--5">This project</h3>
+          <ul class="p-list--divided">
+            <li class="p-list__item">
+              <a href="https://github.com/canonical/ubuntu-manpages-operator">Source on GitHub</a>
+            </li>
+            <li class="p-list__item">
+              <a href="https://github.com/canonical/ubuntu-manpages-operator/issues"
+                >Report a problem</a
+              >
+            </li>
+          </ul>
+        </div>
+      </div>
     </div>
   </div>
 </section>
+
 {{ end }}

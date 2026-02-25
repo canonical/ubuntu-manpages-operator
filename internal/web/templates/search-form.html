@@ -1,0 +1,16 @@
+{{ define "search-inputs" }}
+<input
+  type="search"
+  class="p-search-box__input"
+  name="q"
+  placeholder="Search for a command, package, or topic..."
+  required=""
+  autocomplete="on"
+/>
+<button type="reset" class="p-search-box__reset" name="close">
+  <i class="p-icon--close">Close</i>
+</button>
+<button type="submit" class="p-search-box__button" name="submitSearch">
+  <i class="p-icon--search">Search</i>
+</button>
+{{ end }}

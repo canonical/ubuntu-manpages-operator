@@ -1,77 +1,11 @@
 {{ define "base" }}
 <!doctype html>
 <html lang="en" dir="ltr">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="author" content="Canonical" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#E95420" />
-    <title>{{ block "title" . }}Ubuntu Manpages{{ end }}</title>
-    {{ block "head-meta" . }}{{ end }}
-    <link
-      rel="stylesheet"
-      href="https://assets.ubuntu.com/v1/vanilla_framework_version_4_44_0_min.css"
-    />
-    <link rel="stylesheet" href="/static/docs.css" />
-    <link
-      rel="icon"
-      type="image/png"
-      href="https://assets.ubuntu.com/v1/16c27f81-COF%2520favicon-16x16.png"
-      sizes="16x16"
-    />
-    <link
-      rel="icon"
-      type="image/png"
-      href="https://assets.ubuntu.com/v1/be7e4cc6-COF-favicon-32x32.png"
-      sizes="32x32"
-    />
-    <link
-      rel="icon"
-      type="image/png"
-      href="https://assets.ubuntu.com/v1/6ead207a-COF-favicon-48x48.png"
-      sizes="48x48"
-    />
-    <link
-      rel="apple-touch-icon"
-      sizes="180x180"
-      href="https://assets.ubuntu.com/v1/f38b9c7e-COF%2520apple-touch-icon.png"
-    />
-  </head>
+  {{ template "head" . }}
   <body class="is-paper">
     <div class="l-docs">
       <div class="l-docs__header">
-        <header id="navigation" class="p-navigation is-dark">
-          <div class="l-docs__subgrid">
-            <div class="l-docs__sidebar">
-              <div class="p-navigation__banner">
-                <div class="p-navigation__tagged-logo">
-                  <a class="p-navigation__link" href="/">
-                    <div class="p-navigation__logo-tag">
-                      <img class="p-navigation__logo-icon" src="https://assets.ubuntu.com/v1/82818827-CoF_white.svg" alt="" />
-                    </div>
-                    <span class="p-navigation__logo-title">Manpages</span>
-                  </a>
-                </div>
-                <a href="#navigation" class="p-navigation__toggle--open" title="menu">Menu</a>
-                <a href="#navigation-closed" class="p-navigation__toggle--close" title="close menu">Close menu</a>
-              </div>
-            </div>
-            <div class="l-docs__main">
-              <div class="p-navigation__row u-fixed-width">
-                <nav class="p-navigation__nav" aria-label="Main">
-                  <ul class="p-navigation__items">
-                    <li class="p-navigation__item{{ if eq .ActiveNav "search" }} is-selected{{ end }}">
-                      <a class="p-navigation__link" href="/search">Search</a>
-                    </li>
-                    <li class="p-navigation__item{{ if eq .ActiveNav "browse" }} is-selected{{ end }}">
-                      <a class="p-navigation__link" href="/manpages">Browse</a>
-                    </li>
-                  </ul>
-                </nav>
-              </div>
-            </div>
-          </div>
-        </header>
+        {{ template "header" . }}
         <section id="search-docs" class="p-strip is-bordered is-shallow l-docs__subgrid">
           <div class="l-docs__sidebar u-hide--medium u-hide--small">
             <div class="u-fixed-width">
@@ -81,9 +15,7 @@
           <div class="l-docs__main">
             <div class="row">
               <form class="p-search-box u-no-margin--bottom" method="get" action="/search">
-                <input type="search" class="p-search-box__input" name="q" placeholder="Search for a command, package, or topic..." required="" autocomplete="on"/>
-                <button type="reset" class="p-search-box__reset" name="close"><i class="p-icon--close">Close</i></button>
-                <button type="submit" class="p-search-box__button" name="submitSearch"><i class="p-icon--search">Search</i></button>
+                {{ template "search-inputs" . }}
               </form>
             </div>
           </div>
@@ -131,22 +63,7 @@
       </main>
 
       <div class="l-docs__footer">
-        <footer class="p-strip is-dark l-docs__subgrid">
-          <div class="l-docs__sidebar">
-            <p style="padding-left: 1.5rem">&copy; Canonical Ltd.</p>
-          </div>
-          <div class="l-docs__main">
-            <nav class="row" aria-label="Footer">
-              <p>
-                Powered by the
-                <a href="https://github.com/canonical/ubuntu-manpages-operator">Ubuntu Manpage Operator</a>,
-                file bugs in
-                <a href="https://github.com/canonical/ubuntu-manpages-operator/issues">GitHub</a>
-              </p>
-              <p>Ubuntu and Canonical are registered trademarks of Canonical Ltd.{{ with commitHash }} · Build {{ . }}{{ end }}</p>
-            </nav>
-          </div>
-        </footer>
+        {{ template "footer" . }}
       </div>
     </div>
 

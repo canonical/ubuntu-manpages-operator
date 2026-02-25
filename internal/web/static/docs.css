@@ -39,67 +39,16 @@
   margin-top: 0.125rem;
 }
 
-/* ===== Homepage feature cards ===== */
+/* ===== Landing page ===== */
 
-.mp-feature-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
-  width: 100%;
-}
-
-.mp-feature-card {
-  background: var(--vf-color-background-default);
-  border: 1px solid var(--vf-color-border-default);
-  border-top: 3px solid #e95420;
-  border-radius: 0.25rem;
-  padding: 1.25rem;
-}
-
-.mp-feature-card p:last-child {
-  margin-bottom: 0;
-}
-
-@media (max-width: 768px) {
-  .mp-feature-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* ===== Homepage release grid ===== */
-
-.mp-release-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr));
-  gap: 0.75rem;
-}
-
-.mp-release-card {
+.mp-landing {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  aspect-ratio: 1;
-  padding: 1rem;
-  border: 1px solid var(--vf-color-border-default);
-  border-radius: 0.25rem;
-  text-decoration: none;
-  transition: border-color 0.1s;
+  min-height: 100vh;
 }
 
-.mp-release-card:hover {
-  border-color: var(--vf-color-text-default);
-}
-
-.mp-release-card__version {
-  font-size: 1.125rem;
-  font-weight: 500;
-}
-
-.mp-release-card__codename {
-  font-size: 0.8125rem;
-  color: var(--vf-color-text-muted);
-  text-transform: capitalize;
+.mp-landing > main {
+  flex: 1;
 }
 
 /* ===== Manpage content typography ===== */

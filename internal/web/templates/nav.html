@@ -1,0 +1,53 @@
+{{ define "header" }}
+<header id="navigation" class="p-navigation is-dark">
+  <div class="row--25-75">
+    <div class="col">
+      <div class="p-navigation__banner">
+        <div class="p-navigation__tagged-logo">
+          <a class="p-navigation__link" href="/">
+            <div class="p-navigation__logo-tag">
+              <img
+                class="p-navigation__logo-icon"
+                src="https://assets.ubuntu.com/v1/82818827-CoF_white.svg"
+                alt=""
+              />
+            </div>
+            <span class="p-navigation__logo-title">Manpages</span>
+          </a>
+        </div>
+        <a href="#navigation" class="p-navigation__toggle--open" title="menu">Menu</a>
+        <a href="#navigation-closed" class="p-navigation__toggle--close" title="close menu"
+          >Close menu</a
+        >
+      </div>
+    </div>
+    <div class="col">
+      <div class="p-navigation__row u-fixed-width">
+        <nav class="p-navigation__nav" aria-label="Main">
+          <ul class="p-navigation__items">
+            <li class="p-navigation__item{{ if eq .ActiveNav "search" }} is-selected{{ end }}">
+              <a class="p-navigation__link" href="/search">Search</a>
+            </li>
+            <li class="p-navigation__item{{ if eq .ActiveNav "browse" }} is-selected{{ end }}">
+              <a class="p-navigation__link" href="/manpages">Browse</a>
+            </li>
+            <li class="p-navigation__item--dropdown-toggle" id="releases-dropdown">
+              <a class="p-navigation__link" aria-controls="releases-menu" href="#">Releases</a>
+              <ul class="p-navigation__dropdown--right" id="releases-menu" aria-hidden="true">
+                {{ range .Releases }}
+                <li class="p-navigation__dropdown-item">
+                  <a class="p-navigation__link" href="/manpages/{{ .Name }}"
+                    >{{ .Label }}
+                    <span style="opacity: 0.7">({{ .Name }})</span></a
+                  >
+                </li>
+                {{ end }}
+              </ul>
+            </li>
+          </ul>
+        </nav>
+      </div>
+    </div>
+  </div>
+</header>
+{{ end }}

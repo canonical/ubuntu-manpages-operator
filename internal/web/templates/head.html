@@ -1,0 +1,38 @@
+{{ define "head" }}
+<head>
+  <meta charset="UTF-8" />
+  <meta name="author" content="Canonical" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#E95420" />
+  <title>{{ block "title" . }}Ubuntu Manpages{{ end }}</title>
+  {{ block "head-meta" . }}{{ end }}
+  <link
+    rel="stylesheet"
+    href="https://assets.ubuntu.com/v1/vanilla_framework_version_4_44_0_min.css"
+  />
+  <link rel="stylesheet" href="/static/docs.css" />
+  <link
+    rel="icon"
+    type="image/png"
+    href="https://assets.ubuntu.com/v1/16c27f81-COF%2520favicon-16x16.png"
+    sizes="16x16"
+  />
+  <link
+    rel="icon"
+    type="image/png"
+    href="https://assets.ubuntu.com/v1/be7e4cc6-COF-favicon-32x32.png"
+    sizes="32x32"
+  />
+  <link
+    rel="icon"
+    type="image/png"
+    href="https://assets.ubuntu.com/v1/6ead207a-COF-favicon-48x48.png"
+    sizes="48x48"
+  />
+  <link
+    rel="apple-touch-icon"
+    sizes="180x180"
+    href="https://assets.ubuntu.com/v1/f38b9c7e-COF%2520apple-touch-icon.png"
+  />
+</head>
+{{ end }}

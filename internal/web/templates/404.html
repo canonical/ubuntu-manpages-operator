@@ -5,14 +5,21 @@
 {{ end }}
 
 {{ define "main" }}
-<div class="row">
-  <div class="col-8">
-    <h1>Page not found</h1>
-    <p>The page you requested could not be found. It may not have been ingested yet, or the URL may be incorrect.</p>
-    <p>
-      <a href="/manpages">Browse releases</a> or
-      <a href="/search">search for a manpage</a>.
-    </p>
+<section class="p-section--hero">
+  <div class="row--50-50">
+    <div class="col">
+      <h1>Page not found</h1>
+    </div>
+    <div class="col">
+      <p>
+        The page you requested could not be found. It may not have been ingested yet, or the URL
+        may be incorrect.
+      </p>
+      <div class="p-cta-block">
+        <a class="p-button--positive" href="/search">Search manpages</a>
+        <a class="p-button" href="/manpages">Browse all releases</a>
+      </div>
+    </div>
   </div>
-</div>
+</section>
 {{ end }}

@@ -893,3 +893,40 @@ func TestGroupSearchResultsUnknownDistro(t *testing.T) {
 		t.Errorf("expected distro name as fallback label, got %q", groups[0].Label)
 	}
 }
+
+func TestHandleIndexRendersLandingPage(t *testing.T) {
+	srv, _ := testServer(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	w := httptest.NewRecorder()
+	srv.handleIndex(w, req)
+
+	resp := w.Result()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+
+	body, _ := io.ReadAll(resp.Body)
+	html := string(body)
+
+	// Must contain brochure layout elements, not the docs layout.
+	for _, want := range []string{
+		"Ubuntu Manpage Repository",
+		"Browse by release",
+		"Find a manpage",
+		`action="/search"`,
+		"Other resources",
+		"noble",
+		"What's included",
+		"is-fixed-width p-rule",
+	} {
+		if !strings.Contains(html, want) {
+			t.Errorf("expected landing page to contain %q", want)
+		}
+	}
+
+	// Must NOT contain docs layout markers.
+	if strings.Contains(html, "l-docs__sidebar") {
+		t.Error("landing page should not use the docs sidebar layout")
+	}
+}

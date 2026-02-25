@@ -39,7 +39,7 @@ internal/             # Go internal packages
   storage/            #   Filesystem-based HTML/gzip storage with per-package SHA1 cache
   transform/          #   8-stage HTML transformation pipeline (mandoc output → web-ready HTML)
   web/                #   HTTP server, routes, templates, static assets
-    templates/        #   Go html/template files (base, index, manpage, browse, search, 404)
+    templates/        #   Go html/template files (base, base-landing, head, nav, footer, search-form, index, manpage, browse, search, 404)
     static/           #   CSS and JS served with ETag caching
 
 src/                  # Python charm source
@@ -129,6 +129,17 @@ Failures are non-fatal per manpage — errors are logged and counted. A summary 
 | `GET /static/...`                                  | CSS/JS with content-hash ETag                   |
 
 Search is filesystem-based (no database). It scans `manpages/{release}/man{1-9}/` directories, matching filenames with exact → prefix ranking.
+
+### Template Layouts
+
+The server uses two distinct HTML layouts with shared partials:
+
+- **`base-landing.html`** — Brochure-style layout for the homepage (`/`). Uses `{{ template "header" . }}` for the top nav and no sidebar. The index template fills blocks in this layout.
+- **`base.html`** — Documentation layout (`l-docs`) for all other pages (search, browse, manpage, 404). Uses the same shared header and includes a sidebar with navigation and release links.
+- **`head.html`** — Shared partial defining `{{ define "head" }}` with the full `<head>` element (meta tags, CSS, favicons). Used by both layouts via `{{ template "head" . }}`.
+- **`nav.html`** — Shared partial defining `{{ define "header" }}` with the full `<header>` element (logo, mobile toggles, navigation links, Releases dropdown). Used by both layouts via `{{ template "header" . }}`.
+- **`footer.html`** — Shared partial defining `{{ define "footer" }}` with the site footer (project links, copyright, build revision). Used by both layouts.
+- **`search-form.html`** — Shared partial defining `{{ define "search-inputs" }}` with the search box form elements (input, reset, submit). Used by `base.html` (docs header) and `index.html` (landing page).
 
 ### Building and Running Locally
 
@@ -230,6 +241,7 @@ See [CONTRIBUTING.md](../CONTRIBUTING.md) for development workflow, build instru
 - **8-stage HTML pipeline**: Raw `mandoc` output is transformed through multiple stages to produce web-ready HTML with proper links, TOC, metadata, and structure.
 - **Metadata in HTML comments**: Each generated manpage embeds a `<!--META:{...}-->` JSON comment containing title, description, package info, and TOC. The server parses this at serve time for rendering and search enrichment.
 - **Launchpad API for versions**: Release codenames are resolved to version numbers at startup via the Launchpad REST API. This enables `latest` and `lts` URL aliases.
+- **Two template layouts**: The homepage uses a brochure-style layout (`base-landing.html`) with Vanilla Framework grid classes and no sidebar; all other pages use a documentation layout (`base.html`) with `l-docs` classes and a sidebar.
 
 ---
 

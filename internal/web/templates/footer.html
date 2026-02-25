@@ -1,0 +1,21 @@
+{{ define "footer" }}
+<footer class="p-strip is-dark">
+  <div class="row">
+    <div class="col-12">
+      <nav aria-label="Footer">
+        <p>
+          Powered by the
+          <a href="https://github.com/canonical/ubuntu-manpages-operator"
+            >Ubuntu Manpage Operator</a
+          >, file bugs in
+          <a href="https://github.com/canonical/ubuntu-manpages-operator/issues">GitHub</a>
+        </p>
+        <p>
+          &copy; Canonical Ltd. Ubuntu and Canonical are registered trademarks of Canonical Ltd.{{
+          with commitHash }} · Build {{ . }}{{ end }}
+        </p>
+      </nav>
+    </div>
+  </div>
+</footer>
+{{ end }}

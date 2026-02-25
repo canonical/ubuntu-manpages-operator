@@ -15,6 +15,41 @@
   })
 })()
 
+// Navigation dropdown toggle.
+;(function () {
+  var dropdowns = document.querySelectorAll(".p-navigation__item--dropdown-toggle")
+  dropdowns.forEach(function (dropdown) {
+    var toggle = dropdown.querySelector(".p-navigation__link")
+    if (!toggle) return
+    toggle.addEventListener("click", function (e) {
+      e.preventDefault()
+      var isOpen = dropdown.classList.contains("is-active")
+      // Close all dropdowns first.
+      dropdowns.forEach(function (d) {
+        d.classList.remove("is-active")
+        var menu = d.querySelector(".p-navigation__dropdown--right, .p-navigation__dropdown")
+        if (menu) menu.setAttribute("aria-hidden", "true")
+      })
+      if (!isOpen) {
+        dropdown.classList.add("is-active")
+        var menu = dropdown.querySelector(
+          ".p-navigation__dropdown--right, .p-navigation__dropdown"
+        )
+        if (menu) menu.setAttribute("aria-hidden", "false")
+      }
+    })
+  })
+  document.addEventListener("click", function (e) {
+    if (!e.target.closest(".p-navigation__item--dropdown-toggle")) {
+      dropdowns.forEach(function (d) {
+        d.classList.remove("is-active")
+        var menu = d.querySelector(".p-navigation__dropdown--right, .p-navigation__dropdown")
+        if (menu) menu.setAttribute("aria-hidden", "true")
+      })
+    }
+  })
+})()
+
 // Prefill search input from URL query parameter.
 ;(function () {
   var input = document.querySelector("#search-docs .p-search-box__input")

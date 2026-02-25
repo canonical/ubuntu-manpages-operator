@@ -1,0 +1,15 @@
+{{ define "base-landing" }}
+<!doctype html>
+<html lang="en" dir="ltr">
+  {{ template "head" . }}
+  <body class="is-paper mp-landing">
+    {{ template "header" . }}
+
+    <main id="main-content">{{ block "main" . }}{{ end }}</main>
+
+    {{ template "footer" . }}
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>
+{{ end }}

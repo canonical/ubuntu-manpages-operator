@@ -24,7 +24,7 @@ import (
 	"github.com/canonical/ubuntu-manpages-operator/internal/transform"
 )
 
-//go:embed templates/base.html templates/index.html templates/search.html templates/browse.html templates/manpage.html templates/404.html static/docs.css static/app.js
+//go:embed templates/base.html templates/base-landing.html templates/head.html templates/nav.html templates/footer.html templates/search-form.html templates/index.html templates/search.html templates/browse.html templates/manpage.html templates/404.html static/docs.css static/app.js
 var webAssets embed.FS
 
 const (
@@ -109,6 +109,7 @@ func NewServer(cfg *config.Config, logger *slog.Logger) *Server {
 		"commitHash": func() string { return vcsRevision },
 		"sub":        func(a, b int) int { return a - b },
 		"add":        func(a, b int) int { return a + b },
+		"even":       func(i int) bool { return i%2 == 0 },
 		"pageURL": func(path string, page, perPage int) string {
 			if page <= 1 && perPage == defaultBrowsePageSize {
 				return path
@@ -154,11 +155,12 @@ func NewServer(cfg *config.Config, logger *slog.Logger) *Server {
 	parse := func(files ...string) *template.Template {
 		return template.Must(template.New("").Funcs(funcMap).ParseFS(webAssets, files...))
 	}
-	index := parse("templates/base.html", "templates/index.html")
-	searchPage := parse("templates/base.html", "templates/search.html")
-	browsePage := parse("templates/base.html", "templates/browse.html")
-	manpagePage := parse("templates/base.html", "templates/manpage.html")
-	notFound := parse("templates/base.html", "templates/404.html")
+	partials := []string{"templates/head.html", "templates/nav.html", "templates/footer.html", "templates/search-form.html"}
+	index := parse(append(partials, "templates/base-landing.html", "templates/index.html")...)
+	searchPage := parse(append(partials, "templates/base.html", "templates/search.html")...)
+	browsePage := parse(append(partials, "templates/base.html", "templates/browse.html")...)
+	manpagePage := parse(append(partials, "templates/base.html", "templates/manpage.html")...)
+	notFound := parse(append(partials, "templates/base.html", "templates/404.html")...)
 	searcher := search.NewFSSearcher(cfg.PublicHTMLDir, cfg.ReleaseKeys())
 	return &Server{
 		cfg:         cfg,
@@ -283,7 +285,7 @@ func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
 	view.ActiveNav = "home"
 	view.JSONLD = buildIndexJSONLD(view.SiteURL)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := s.index.ExecuteTemplate(w, "base", view); err != nil {
+	if err := s.index.ExecuteTemplate(w, "base-landing", view); err != nil {
 		s.logger.Error("render error", "template", "index", "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
 	}
