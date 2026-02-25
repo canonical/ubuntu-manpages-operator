@@ -99,6 +99,9 @@ func TestHandleLlmsTxt(t *testing.T) {
 	if !strings.Contains(text, ".txt") {
 		t.Error("missing plain text endpoint documentation")
 	}
+	if !strings.Contains(text, "match_type") {
+		t.Error("missing match_type documentation")
+	}
 }
 
 func TestHandleLlmsFullTxt(t *testing.T) {
@@ -120,6 +123,12 @@ func TestHandleLlmsFullTxt(t *testing.T) {
 	}
 	if !strings.Contains(text, "noble") {
 		t.Error("missing release listing")
+	}
+	if !strings.Contains(text, "Search Ranking") {
+		t.Error("missing search ranking section")
+	}
+	if !strings.Contains(text, "match_type") {
+		t.Error("missing match_type in response format")
 	}
 }
 

@@ -1015,7 +1015,9 @@ Append .txt to any manpage URL for plain text output suitable for LLM consumptio
 ## API
 
 - GET /api/search?q={query}&release={release}&lang={lang}&limit={n}&offset={n}
-  Returns JSON with fields: total, results (array of {title, path, distro, section})
+  Returns JSON with fields: total, results (array of {title, path, distro, section, match_type})
+  match_type is one of: exact, prefix, contains, fuzzy (Damerau-Levenshtein)
+  Results are ranked: exact > prefix > contains > fuzzy
 `)
 }
 
@@ -1088,10 +1090,24 @@ GET %[1]s/api/search
       "title": "ls - list directory contents",
       "path": "/manpages/noble/man1/ls.1.html",
       "distro": "noble",
-      "section": 1
+      "section": 1,
+      "match_type": "exact"
     }
   ]
 }
+
+### Search Ranking
+
+Results are returned in four ranked tiers:
+1. exact — case-insensitive exact match on the command name
+2. prefix — query is a prefix of the command name
+3. contains — query appears as a substring within the command name
+4. fuzzy — within Damerau-Levenshtein edit distance (typo tolerance)
+
+Each result carries a "match_type" field indicating which tier it matched.
+Fuzzy matching is disabled for queries of 2 characters or fewer. For queries
+of 3-4 characters the max edit distance is 1; for 5+ characters it is 2.
+Fuzzy results are capped at 10.
 
 ### Example Requests
 
