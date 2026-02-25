@@ -226,6 +226,31 @@ func TestBuildIndexJSONLD(t *testing.T) {
 	}
 }
 
+func TestBuildIndexViewReleasesAscending(t *testing.T) {
+	cfg := &config.Config{
+		Site:     "https://manpages.ubuntu.com",
+		Releases: []string{"noble", "jammy", "xenial", "plucky", "trusty"},
+		ReleaseVersions: map[string]string{
+			"noble":  "24.04",
+			"jammy":  "22.04",
+			"xenial": "16.04",
+			"plucky": "25.04",
+			"trusty": "14.04",
+		},
+	}
+	view := buildIndexView(cfg)
+
+	want := []string{"trusty", "xenial", "jammy", "noble", "plucky"}
+	if len(view.Releases) != len(want) {
+		t.Fatalf("got %d releases, want %d", len(view.Releases), len(want))
+	}
+	for i, r := range view.Releases {
+		if r.Name != want[i] {
+			t.Errorf("release[%d] = %q, want %q", i, r.Name, want[i])
+		}
+	}
+}
+
 func TestLogRequestsStatus200(t *testing.T) {
 	srv, _ := testServer(t)
 

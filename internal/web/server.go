@@ -774,10 +774,31 @@ func buildIndexView(cfg *config.Config) indexView {
 		labels = append(labels, indexRelease{Name: key, Label: label})
 	}
 
+	// Sort releases ascending by version number (e.g. 14.04, 16.04, …, 25.10).
+	sort.Slice(labels, func(i, j int) bool {
+		vi := cfg.ReleaseVersions[labels[i].Name]
+		vj := cfg.ReleaseVersions[labels[j].Name]
+		majI, minI := parseVersionParts(vi)
+		majJ, minJ := parseVersionParts(vj)
+		if majI != majJ {
+			return majI < majJ
+		}
+		return minI < minJ
+	})
+
 	return indexView{
 		Releases: labels,
 		SiteURL:  cfg.SiteURL(),
 	}
+}
+
+func parseVersionParts(ver string) (maj, min int) {
+	parts := strings.Split(ver, ".")
+	if len(parts) == 2 {
+		maj, _ = strconv.Atoi(parts[0])
+		min, _ = strconv.Atoi(parts[1])
+	}
+	return
 }
 
 func (s *Server) handleRobotsTxt(w http.ResponseWriter, _ *http.Request) {
