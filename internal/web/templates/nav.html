@@ -34,7 +34,7 @@
             <li class="p-navigation__item--dropdown-toggle" id="releases-dropdown">
               <a class="p-navigation__link" aria-controls="releases-menu" href="#">Releases</a>
               <ul class="p-navigation__dropdown--right" id="releases-menu" aria-hidden="true">
-                {{ range .Releases }}
+                {{ range reverseReleases .Releases }}
                 <li class="p-navigation__dropdown-item">
                   <a class="p-navigation__link" href="/manpages/{{ .Name }}"
                     >{{ .Label }}

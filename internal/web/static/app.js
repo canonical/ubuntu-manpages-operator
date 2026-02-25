@@ -58,27 +58,6 @@
   if (q) input.value = q
 })()
 
-// Tab switching for search result groups.
-;(function () {
-  document.querySelectorAll("[role='tab']").forEach(function (tab) {
-    tab.addEventListener("click", function () {
-      var id = this.id
-      document.querySelectorAll("[role='tab']").forEach(function (t) {
-        var active = t.id === id
-        t.setAttribute("aria-selected", active)
-        t.tabIndex = active ? 0 : -1
-      })
-      document.querySelectorAll("[role='tabpanel']").forEach(function (p) {
-        if (p.getAttribute("aria-labelledby") === id) {
-          p.removeAttribute("hidden")
-        } else {
-          p.setAttribute("hidden", "hidden")
-        }
-      })
-    })
-  })
-})()
-
 // Per-page selector for browse listings.
 ;(function () {
   var sel = document.getElementById("browse-per-page")

@@ -14,9 +14,12 @@
           </div>
           <div class="l-docs__main">
             <div class="row">
-              <form class="p-search-box u-no-margin--bottom" method="get" action="/search">
-                {{ template "search-inputs" . }}
-              </form>
+              <div class="mp-search-bar">
+                <form class="p-search-box u-no-margin--bottom" method="get" action="/search">
+                  {{ template "search-inputs" . }}
+                </form>
+                {{ block "search-extras" . }}{{ end }}
+              </div>
             </div>
           </div>
         </section>
@@ -45,7 +48,7 @@
             </ul>
             <ul>
               <li><strong>Releases</strong></li>
-              {{ range .Releases }}
+              {{ range reverseReleases .Releases }}
               <li><a href="/manpages/{{ .Name }}">{{ .Label }}</a></li>
               {{ end }}
             </ul>
@@ -68,6 +71,7 @@
     </div>
 
     <script src="/static/app.js"></script>
+    {{ block "scripts" . }}{{ end }}
   </body>
 </html>
 {{ end }}

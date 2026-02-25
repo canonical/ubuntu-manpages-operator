@@ -24,7 +24,7 @@ import (
 	"github.com/canonical/ubuntu-manpages-operator/internal/transform"
 )
 
-//go:embed templates/base.html templates/base-landing.html templates/head.html templates/nav.html templates/footer.html templates/search-form.html templates/index.html templates/search.html templates/browse.html templates/manpage.html templates/404.html static/docs.css static/app.js
+//go:embed templates/base.html templates/base-landing.html templates/head.html templates/nav.html templates/footer.html templates/search-form.html templates/index.html templates/search.html templates/browse.html templates/manpage.html templates/404.html static/docs.css static/app.js static/search.js
 var webAssets embed.FS
 
 const (
@@ -65,28 +65,34 @@ type manpageView struct {
 }
 
 type searchView struct {
-	ActiveNav    string
-	Releases     []indexRelease
-	SiteURL      string
-	JSONLD       template.HTML
-	Query        string
-	Total        uint64
-	ResultGroups []searchGroup
-	SearchError  bool
+	ActiveNav     string
+	Releases      []indexRelease
+	ActiveRelease string
+	SiteURL       string
+	JSONLD        template.HTML
+	Query         string
+	Total         uint64
+	ResultGroups  []searchGroup
+	HasFuzzy      bool
+	SearchError   bool
+	Limit         int
 }
 
 type searchGroup struct {
-	Distro  string
-	Label   string
-	Count   int
-	Results []searchResultView
+	Distro       string
+	Label        string
+	Count        int
+	Results      []searchResultView
+	FuzzyResults []searchResultView
+	FuzzyCount   int
 }
 
 type searchResultView struct {
-	Name    string
-	Desc    string
-	Path    string
-	Section int
+	Name      string
+	Desc      string
+	Path      string
+	Section   int
+	MatchType search.MatchType
 }
 
 var vcsRevision = readVCSRevision()
@@ -110,6 +116,13 @@ func NewServer(cfg *config.Config, logger *slog.Logger) *Server {
 		"sub":        func(a, b int) int { return a - b },
 		"add":        func(a, b int) int { return a + b },
 		"even":       func(i int) bool { return i%2 == 0 },
+		"reverseReleases": func(rs []indexRelease) []indexRelease {
+			out := make([]indexRelease, len(rs))
+			for i, r := range rs {
+				out[len(rs)-1-i] = r
+			}
+			return out
+		},
 		"pageURL": func(path string, page, perPage int) string {
 			if page <= 1 && perPage == defaultBrowsePageSize {
 				return path
@@ -212,23 +225,49 @@ func (s *Server) ListenAndServe(addr string) error {
 
 func (s *Server) handleSearchPage(w http.ResponseWriter, r *http.Request) {
 	idx := buildIndexView(s.cfg)
+
+	// Determine the active release: use the query param if valid,
+	// otherwise default to the newest release (last in ascending list).
+	activeRelease := r.URL.Query().Get("release")
+	valid := false
+	for _, rel := range idx.Releases {
+		if rel.Name == activeRelease {
+			valid = true
+			break
+		}
+	}
+	if !valid && len(idx.Releases) > 0 {
+		activeRelease = idx.Releases[len(idx.Releases)-1].Name
+	}
+
+	limit := parseIntQuery(r, "limit", 20)
+	switch limit {
+	case 20, 50, 100, 200:
+	default:
+		limit = 20
+	}
+
 	view := searchView{
-		ActiveNav: "search",
-		Releases:  idx.Releases,
-		SiteURL:   idx.SiteURL,
-		Query:     r.URL.Query().Get("q"),
+		ActiveNav:     "search",
+		Releases:      idx.Releases,
+		ActiveRelease: activeRelease,
+		SiteURL:       idx.SiteURL,
+		Query:         r.URL.Query().Get("q"),
+		Limit:         limit,
 	}
 
 	if view.Query != "" {
 		if s.search == nil {
 			view.SearchError = true
 		} else {
-			results, err := s.search.Search(r.Context(), view.Query, "", "", 50, 0)
+			results, err := s.search.Search(r.Context(), view.Query, activeRelease, "", limit, 0)
 			if err != nil {
 				view.SearchError = true
 			} else {
-				view.Total = results.Total
-				view.ResultGroups = groupSearchResults(results.Results, idx.Releases)
+				view.ResultGroups, view.HasFuzzy = groupSearchResults(results.Results, idx.Releases)
+				for _, g := range view.ResultGroups {
+					view.Total += uint64(g.Count)
+				}
 			}
 		}
 	}
@@ -239,13 +278,14 @@ func (s *Server) handleSearchPage(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func groupSearchResults(results []search.Result, releases []indexRelease) []searchGroup {
+func groupSearchResults(results []search.Result, releases []indexRelease) ([]searchGroup, bool) {
 	labelMap := make(map[string]string, len(releases))
 	for _, r := range releases {
 		labelMap[r.Name] = r.Label
 	}
 
 	var order []string
+	var hasFuzzy bool
 	groups := map[string]*searchGroup{}
 	for _, r := range results {
 		g, ok := groups[r.Distro]
@@ -258,21 +298,42 @@ func groupSearchResults(results []search.Result, releases []indexRelease) []sear
 			groups[r.Distro] = g
 			order = append(order, r.Distro)
 		}
+
 		name, desc := transform.SplitManpageTitle(r.Title)
-		g.Results = append(g.Results, searchResultView{
-			Name:    name,
-			Desc:    desc,
-			Path:    r.Path,
-			Section: r.Section,
-		})
-		g.Count++
+		srv := searchResultView{
+			Name:      name,
+			Desc:      desc,
+			Path:      r.Path,
+			Section:   r.Section,
+			MatchType: r.MatchType,
+		}
+		if r.MatchType == search.MatchFuzzy {
+			g.FuzzyResults = append(g.FuzzyResults, srv)
+			g.FuzzyCount++
+			hasFuzzy = true
+		} else {
+			g.Results = append(g.Results, srv)
+			g.Count++
+		}
 	}
 
-	out := make([]searchGroup, 0, len(order))
-	for _, distro := range order {
-		out = append(out, *groups[distro])
+	// Emit groups in descending release order (newest first).
+	// Walk the releases list backwards; append any distros not in releases at the end.
+	seen := make(map[string]bool, len(releases))
+	out := make([]searchGroup, 0, len(groups))
+	for i := len(releases) - 1; i >= 0; i-- {
+		name := releases[i].Name
+		if g, ok := groups[name]; ok {
+			out = append(out, *g)
+			seen[name] = true
+		}
 	}
-	return out
+	for _, distro := range order {
+		if !seen[distro] {
+			out = append(out, *groups[distro])
+		}
+	}
+	return out, hasFuzzy
 }
 
 func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
@@ -310,7 +371,7 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query().Get("q")
 	distro := r.URL.Query().Get("release")
 	lang := r.URL.Query().Get("lang")
-	limit := parseIntQuery(r, "limit", 50)
+	limit := parseIntQuery(r, "limit", 20)
 	offset := parseIntQuery(r, "offset", 0)
 
 	results, err := s.search.Search(r.Context(), query, distro, lang, limit, offset)
@@ -385,6 +446,7 @@ func securityHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Security-Policy",
 			"default-src 'none'; script-src 'self'; "+
+				"connect-src 'self'; "+
 				"style-src 'self' 'unsafe-inline' https://assets.ubuntu.com; "+
 				"img-src 'self' data: https://assets.ubuntu.com; "+
 				"font-src 'self' https://assets.ubuntu.com https://fonts.gstatic.com; "+
@@ -1014,7 +1076,7 @@ GET %[1]s/api/search
 - q (required): Search query string
 - release (optional): Filter by Ubuntu release codename (e.g. "noble")
 - lang (optional): Language filter (default: "en")
-- limit (optional): Maximum results to return (default: 50)
+- limit (optional): Maximum results to return (default: 20)
 - offset (optional): Pagination offset (default: 0)
 
 ### Response Format

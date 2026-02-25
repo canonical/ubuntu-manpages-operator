@@ -1,78 +1,105 @@
-{{ define "title" }}Search | Ubuntu Manpages{{ end }}
-
-{{ define "head-meta" }}
-    <meta name="robots" content="noindex, follow" />
-{{ end }}
-
-{{ define "page-title" }}
+{{ define "title" }}Search | Ubuntu Manpages{{ end }} {{ define "head-meta" }}
+<meta name="robots" content="noindex, follow" />
+{{ end }} {{ define "page-title" }}
 <div class="l-docs__title" id="main-content"></div>
-{{ end }}
-
-{{ define "result-list" }}
+{{ end }} {{ define "result-list" }}
 <ul class="p-list">
   {{ range .Results }}
   <li class="p-list__item">
     <a href="{{ .Path }}">{{ .Name }}</a>
-    <div class="mp-search-meta">man({{ .Section }}){{ if .Desc }} &middot; {{ .Desc }}{{ end }}</div>
+    <div class="mp-search-meta">
+      man({{ .Section }}){{ if .Desc }} &middot; {{ .Desc }}{{ end }}
+    </div>
   </li>
   {{ end }}
 </ul>
-{{ end }}
-
-{{ define "main" }}
+{{ if gt .FuzzyCount 0 }}
+<p class="p-heading--5">Similar matches</p>
+<ul class="p-list">
+  {{ range .FuzzyResults }}
+  <li class="p-list__item">
+    <a href="{{ .Path }}">{{ .Name }}</a>
+    <div class="mp-search-meta">
+      man({{ .Section }}){{ if .Desc }} &middot; {{ .Desc }}{{ end }}
+    </div>
+  </li>
+  {{ end }}
+</ul>
+{{ end }} {{ end }} {{ define "search-extras" }}
+<select id="search-limit" class="mp-search-limit" aria-label="Number of results to show">
+  {{ $limit := .Limit }}
+  <option value="20" {{ if eq $limit 20 }} selected{{ end }}>Show 20</option>
+  <option value="50" {{ if eq $limit 50 }} selected{{ end }}>Show 50</option>
+  <option value="100" {{ if eq $limit 100 }} selected{{ end }}>Show 100</option>
+  <option value="200" {{ if eq $limit 200 }} selected{{ end }}>Show 200</option>
+</select>
+{{ end }} {{ define "main" }}
 <div class="row">
-  <div class="col-10">
-    {{ if .Query }}
-      {{ if .SearchError }}
-        <p class="u-text--muted mp-search-summary">Search is unavailable.</p>
-      {{ else if eq .Total 0 }}
-        <p class="u-text--muted mp-search-summary">No results found.</p>
-      {{ else }}
-        <div class="u-text--muted mp-search-summary">
-          {{ .Total }} result{{ if ne .Total 1 }}s{{ end }} found.
-        </div>
-        {{ if eq (len .ResultGroups) 1 }}
-          {{ template "result-list" (index .ResultGroups 0) }}
-        {{ else }}
-          <div class="p-tabs">
-            <div class="p-tabs__list" role="tablist" aria-label="Results by release">
-              {{ range $i, $g := .ResultGroups }}
-              <div class="p-tabs__item">
-                <button class="p-tabs__link" role="tab"
-                  id="tab-{{ $g.Distro }}"
-                  aria-selected="{{ if eq $i 0 }}true{{ else }}false{{ end }}"
-                  aria-controls="panel-{{ $g.Distro }}"
-                  {{ if ne $i 0 }}tabindex="-1"{{ end }}>
-                  {{ $g.Label }} ({{ $g.Count }})
-                </button>
-              </div>
-              {{ end }}
-            </div>
-            {{ range $i, $g := .ResultGroups }}
-            <div role="tabpanel" id="panel-{{ $g.Distro }}"
-              aria-labelledby="tab-{{ $g.Distro }}" tabindex="0"
-              {{ if ne $i 0 }}hidden="hidden"{{ end }}>
-              {{ template "result-list" $g }}
-            </div>
-            {{ end }}
-          </div>
-        {{ end }}
-      {{ end }}
+  <div class="col-12">
+    {{ if .Query }} {{ if .SearchError }}
+    <p class="u-text--muted mp-search-summary">Search is unavailable.</p>
     {{ else }}
-      <div class="mp-search-empty">
-        <p class="p-heading--4">Search across every manpage in Ubuntu</p>
-        <p>Try something like:</p>
-        <div class="mp-search-suggestions">
-          <a class="p-chip" href="/search?q=systemctl"><span class="p-chip__value">systemctl</span></a>
-          <a class="p-chip" href="/search?q=grep"><span class="p-chip__value">grep</span></a>
-          <a class="p-chip" href="/search?q=nginx"><span class="p-chip__value">nginx</span></a>
-          <a class="p-chip" href="/search?q=ssh_config"><span class="p-chip__value">ssh_config</span></a>
-          <a class="p-chip" href="/search?q=crontab"><span class="p-chip__value">crontab</span></a>
-          <a class="p-chip" href="/search?q=iptables"><span class="p-chip__value">iptables</span></a>
-        </div>
+    <div
+      id="search-results"
+      class="p-tabs"
+      data-query="{{ .Query }}"
+      data-release="{{ .ActiveRelease }}"
+      data-limit="{{ .Limit }}"
+    >
+      <div class="mp-search-header">
+        <h2 class="p-heading--4 u-no-margin--bottom">Search results</h2>
+        <p class="u-text--muted u-no-margin--bottom mp-search-hint">
+          Select a release to see results from that version of Ubuntu.
+        </p>
       </div>
+      <div class="p-tabs__list" role="tablist" aria-label="Results by release">
+        {{ $query := .Query }}{{ $active := .ActiveRelease }} {{ range $i, $rel := reverseReleases
+        .Releases }}
+        <div class="p-tabs__item">
+          <a
+            class="p-tabs__link"
+            role="tab"
+            data-release="{{ $rel.Name }}"
+            aria-selected="{{ if eq $rel.Name $active }}true{{ else }}false{{ end }}"
+            href="/search?q={{ $query }}&release={{ $rel.Name }}"
+          >
+            {{ $rel.Label }}
+          </a>
+        </div>
+        {{ end }}
+      </div>
+      <div data-search-results-area>
+        {{ if gt .Total 0 }} {{ range $i, $g := .ResultGroups }}
+        <div role="tabpanel" tabindex="0">{{ template "result-list" $g }}</div>
+        {{ end }} {{ else if .HasFuzzy }}
+        <p class="u-text--muted mp-search-summary">No exact results found.</p>
+        {{ range $i, $g := .ResultGroups }}
+        <div role="tabpanel" tabindex="0">{{ template "result-list" $g }}</div>
+        {{ end }} {{ else }}
+        <p class="u-text--muted mp-search-summary">No results found.</p>
+        {{ end }}
+      </div>
+    </div>
+    {{ end }} {{ else }}
+    <div class="mp-search-empty">
+      <p class="p-heading--4">Search across every manpage in Ubuntu</p>
+      <p>Try something like:</p>
+      <div class="mp-search-suggestions">
+        <a class="p-chip" href="/search?q=systemctl"
+          ><span class="p-chip__value">systemctl</span></a
+        >
+        <a class="p-chip" href="/search?q=grep"><span class="p-chip__value">grep</span></a>
+        <a class="p-chip" href="/search?q=nginx"><span class="p-chip__value">nginx</span></a>
+        <a class="p-chip" href="/search?q=ssh_config"
+          ><span class="p-chip__value">ssh_config</span></a
+        >
+        <a class="p-chip" href="/search?q=crontab"><span class="p-chip__value">crontab</span></a>
+        <a class="p-chip" href="/search?q=iptables"><span class="p-chip__value">iptables</span></a>
+      </div>
+    </div>
     {{ end }}
   </div>
 </div>
+{{ end }} {{ define "scripts" }}
+<script src="/static/search.js"></script>
 {{ end }}
-

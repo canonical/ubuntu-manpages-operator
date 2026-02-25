@@ -495,7 +495,7 @@ func TestHandleSearchPageWithResults(t *testing.T) {
 	if strings.Contains(text, "Search is unavailable") {
 		t.Error("filesystem search should always be available")
 	}
-	if !strings.Contains(text, "found.") {
+	if !strings.Contains(text, "p-list__item") {
 		t.Error("expected search results for 'ls'")
 	}
 }
@@ -716,9 +716,10 @@ func TestSuffixedVariantNoMatch(t *testing.T) {
 }
 
 func TestGroupSearchResults(t *testing.T) {
+	// Releases are sorted ascending by version (oldest first).
 	releases := []indexRelease{
-		{Name: "noble", Label: "24.04 LTS"},
 		{Name: "jammy", Label: "22.04 LTS"},
+		{Name: "noble", Label: "24.04 LTS"},
 	}
 	results := []search.Result{
 		{Title: "ls - list directory contents", Path: "/manpages/noble/man1/ls.1.html", Distro: "noble", Section: 1},
@@ -726,12 +727,12 @@ func TestGroupSearchResults(t *testing.T) {
 		{Title: "lsblk - list block devices", Path: "/manpages/noble/man8/lsblk.8.html", Distro: "noble", Section: 8},
 	}
 
-	groups := groupSearchResults(results, releases)
+	groups, _ := groupSearchResults(results, releases)
 
 	if len(groups) != 2 {
 		t.Fatalf("expected 2 groups, got %d", len(groups))
 	}
-	// First-seen order: noble first.
+	// Descending release order: noble (newest) first.
 	if groups[0].Distro != "noble" {
 		t.Errorf("expected first group to be noble, got %s", groups[0].Distro)
 	}
@@ -884,7 +885,7 @@ func TestGroupSearchResultsUnknownDistro(t *testing.T) {
 		{Title: "foo", Path: "/manpages/unknown/man1/foo.1.html", Distro: "unknown", Section: 1},
 	}
 
-	groups := groupSearchResults(results, nil)
+	groups, _ := groupSearchResults(results, nil)
 
 	if len(groups) != 1 {
 		t.Fatalf("expected 1 group, got %d", len(groups))
@@ -928,5 +929,151 @@ func TestHandleIndexRendersLandingPage(t *testing.T) {
 	// Must NOT contain docs layout markers.
 	if strings.Contains(html, "l-docs__sidebar") {
 		t.Error("landing page should not use the docs sidebar layout")
+	}
+}
+
+func TestHandleSearchAPI_MatchType(t *testing.T) {
+	srv, _ := testServer(t)
+
+	// "ls" should produce an exact match.
+	req := httptest.NewRequest(http.MethodGet, "/api/search?q=ls&release=noble", nil)
+	w := httptest.NewRecorder()
+	srv.handleSearch(w, req)
+
+	resp := w.Result()
+	body, _ := io.ReadAll(resp.Body)
+	text := string(body)
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+	if !strings.Contains(text, `"match_type":"exact"`) {
+		t.Errorf("expected match_type exact in JSON response, got: %s", text)
+	}
+}
+
+func TestHandleSearchPageFuzzySection(t *testing.T) {
+	srv, cfg := testServer(t)
+
+	// Create a "grep" manpage so "grpe" (transposition) fuzzy-matches it.
+	manDir := filepath.Join(cfg.PublicHTMLDir, "manpages", "noble", "man1")
+	fragment := `<!--META:{"title":"grep","description":"print lines that match patterns"}-->` + "\n" + `<p>content</p>`
+	if err := os.WriteFile(filepath.Join(manDir, "grep.1.html"), []byte(fragment), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Recreate the server so the searcher picks up the new file.
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	srv = NewServer(cfg, logger)
+
+	req := httptest.NewRequest(http.MethodGet, "/search?q=grpe", nil)
+	w := httptest.NewRecorder()
+	srv.handleSearchPage(w, req)
+
+	resp := w.Result()
+	body, _ := io.ReadAll(resp.Body)
+	text := string(body)
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+	if !strings.Contains(text, "Similar matches") {
+		t.Error("expected 'Similar matches' section for fuzzy results")
+	}
+	if !strings.Contains(text, "grep") {
+		t.Error("expected grep to appear in fuzzy results for query 'grpe'")
+	}
+}
+
+func TestSplitByMatchType(t *testing.T) {
+	results := []search.Result{
+		{Title: "ls", MatchType: search.MatchExact, Distro: "noble"},
+		{Title: "lsblk", MatchType: search.MatchPrefix, Distro: "noble"},
+		{Title: "false", MatchType: search.MatchContains, Distro: "noble"},
+		{Title: "sl", MatchType: search.MatchFuzzy, Distro: "noble"},
+	}
+
+	groups, hasFuzzy := groupSearchResults(results, nil)
+
+	if !hasFuzzy {
+		t.Error("expected hasFuzzy to be true")
+	}
+	if len(groups) != 1 {
+		t.Fatalf("expected 1 group, got %d", len(groups))
+	}
+	g := groups[0]
+	if g.Count != 3 {
+		t.Errorf("expected 3 primary results, got %d", g.Count)
+	}
+	if g.FuzzyCount != 1 {
+		t.Errorf("expected 1 fuzzy result, got %d", g.FuzzyCount)
+	}
+	if g.FuzzyResults[0].Name != "sl" {
+		t.Errorf("expected fuzzy result 'sl', got %q", g.FuzzyResults[0].Name)
+	}
+}
+
+func TestHandleSearchPageReleaseParam(t *testing.T) {
+	srv, cfg := testServer(t)
+
+	// Add a second release so we can verify switching.
+	cfg.Releases = append(cfg.Releases, "jammy")
+	cfg.ReleaseVersions["jammy"] = "22.04"
+	jammyDir := filepath.Join(cfg.PublicHTMLDir, "manpages", "jammy", "man1")
+	if err := os.MkdirAll(jammyDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	fragment := `<!--META:{"title":"ls","description":"list directory contents"}-->` + "\n" + `<p>content</p>`
+	if err := os.WriteFile(filepath.Join(jammyDir, "ls.1.html"), []byte(fragment), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Recreate server so the searcher picks up both releases.
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	srv = NewServer(cfg, logger)
+
+	// Without release param: defaults to newest (noble).
+	req := httptest.NewRequest(http.MethodGet, "/search?q=ls", nil)
+	w := httptest.NewRecorder()
+	srv.handleSearchPage(w, req)
+	body, _ := io.ReadAll(w.Result().Body)
+	text := string(body)
+
+	if !strings.Contains(text, "/manpages/noble/") {
+		t.Error("default search should return noble results")
+	}
+
+	// With release=jammy: should return jammy results.
+	req = httptest.NewRequest(http.MethodGet, "/search?q=ls&release=jammy", nil)
+	w = httptest.NewRecorder()
+	srv.handleSearchPage(w, req)
+	body, _ = io.ReadAll(w.Result().Body)
+	text = string(body)
+
+	if !strings.Contains(text, "/manpages/jammy/") {
+		t.Error("release=jammy should return jammy results")
+	}
+}
+
+func TestHandleSearchPageNoMatchesShowsTabs(t *testing.T) {
+	srv, _ := testServer(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/search?q=zzzznonexistent", nil)
+	w := httptest.NewRecorder()
+	srv.handleSearchPage(w, req)
+
+	resp := w.Result()
+	body, _ := io.ReadAll(resp.Body)
+	text := string(body)
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+	if !strings.Contains(text, "No results found.") {
+		t.Error("expected 'No results found.' message")
+	}
+	// Tabs should still be rendered so the user can switch releases.
+	if !strings.Contains(text, "p-tabs__link") {
+		t.Error("expected release tabs even with no results")
 	}
 }
