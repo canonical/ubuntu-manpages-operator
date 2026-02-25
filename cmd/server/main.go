@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 
 	"github.com/canonical/ubuntu-manpages-operator/internal/config"
@@ -13,6 +14,7 @@ import (
 func main() {
 	cfg := config.Load()
 	logger := logging.BuildLogger(cfg.LogLevel)
+	slog.SetDefault(logger)
 	if err := cfg.Validate(); err != nil {
 		logger.Error("invalid config", "error", err)
 		os.Exit(1)

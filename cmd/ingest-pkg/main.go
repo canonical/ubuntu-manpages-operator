@@ -24,6 +24,7 @@ func main() {
 
 	cfg := config.Load()
 	logger := logging.BuildLogger(cfg.LogLevel)
+	slog.SetDefault(logger)
 
 	if *release == "" || *pkgName == "" {
 		fmt.Fprintf(os.Stderr, "Usage: ingest-pkg -release <release> -package <name>\n\n")

@@ -19,6 +19,7 @@ import (
 func main() {
 	cfg := config.Load()
 	logger := logging.BuildLogger(cfg.LogLevel)
+	slog.SetDefault(logger)
 
 	if err := ingest(logger, cfg); err != nil {
 		logger.Error("ingest failed", "error", err)
