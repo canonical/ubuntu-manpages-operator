@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"os"
 
@@ -12,13 +11,8 @@ import (
 )
 
 func main() {
-	logLevel := flag.String("log-level", "info", "Log level (debug, info, warn, error)")
-	addr := flag.String("addr", ":8080", "HTTP bind address")
-	flag.Parse()
-
-	logger := logging.BuildLogger(*logLevel)
-
 	cfg := config.Load()
+	logger := logging.BuildLogger(cfg.LogLevel)
 	if err := cfg.Validate(); err != nil {
 		logger.Error("invalid config", "error", err)
 		os.Exit(1)
@@ -33,7 +27,7 @@ func main() {
 	cfg.ReleaseVersions = versions
 
 	server := web.NewServer(cfg, logger)
-	if err := server.ListenAndServe(*addr); err != nil {
+	if err := server.ListenAndServe(cfg.Addr); err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}

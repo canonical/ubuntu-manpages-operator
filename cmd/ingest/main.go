@@ -2,12 +2,9 @@ package main
 
 import (
 	"context"
-	"errors"
-	"flag"
 	"fmt"
 	"log/slog"
 	"os"
-	"slices"
 	"strings"
 
 	"github.com/canonical/ubuntu-manpages-operator/internal/config"
@@ -20,23 +17,16 @@ import (
 )
 
 func main() {
-	logLevel := flag.String("log-level", "info", "Log level (debug, info, warn, error)")
-	release := flag.String("release", "", "Comma-separated list of releases to ingest")
-	workdir := flag.String("workdir", "", "Working directory for downloads/extraction")
-	force := flag.Bool("force", false, "Force reprocessing of all packages (ignore processing cache)")
-	output := flag.String("output", "", "Override public HTML output directory")
-	flag.Parse()
+	cfg := config.Load()
+	logger := logging.BuildLogger(cfg.LogLevel)
 
-	logger := logging.BuildLogger(*logLevel)
-
-	if err := ingest(logger, *release, *workdir, *force, *output); err != nil {
+	if err := ingest(logger, cfg); err != nil {
 		logger.Error("ingest failed", "error", err)
 		os.Exit(1)
 	}
 }
 
-func ingest(logger *slog.Logger, releaseList, workDir string, forceProcess bool, output string) error {
-	cfg := config.Load()
+func ingest(logger *slog.Logger, cfg *config.Config) error {
 	if err := cfg.Validate(); err != nil {
 		return fmt.Errorf("invalid config: %w", err)
 	}
@@ -48,22 +38,11 @@ func ingest(logger *slog.Logger, releaseList, workDir string, forceProcess bool,
 	}
 	cfg.ReleaseVersions = versions
 
-	if output != "" {
-		cfg.PublicHTMLDir = output
-	}
-
-	releases, err := resolveReleases(cfg, releaseList)
+	workDir, err := os.MkdirTemp("", "manpages-ingest-")
 	if err != nil {
-		return fmt.Errorf("invalid release list: %w", err)
+		return fmt.Errorf("create work dir: %w", err)
 	}
-
-	if workDir == "" {
-		workDir, err = os.MkdirTemp("", "manpages-ingest-")
-		if err != nil {
-			return fmt.Errorf("create work dir: %w", err)
-		}
-		defer func() { _ = os.RemoveAll(workDir) }()
-	}
+	defer func() { _ = os.RemoveAll(workDir) }()
 	logger.Info("using work directory", "path", workDir)
 
 	pkgFetcher := fetcher.New(
@@ -92,33 +71,9 @@ func ingest(logger *slog.Logger, releaseList, workDir string, forceProcess bool,
 		SitemapGenerator: sitemapGen,
 		Logger:           logger,
 		FailuresDir:      cfg.PublicHTMLDir,
-		ForceProcess:     forceProcess,
+		ForceProcess:     cfg.Force,
 	}
 
 	ctx := context.Background()
-	return runner.Run(ctx, releases)
-}
-
-var errInvalidRelease = errors.New("invalid release")
-
-func resolveReleases(cfg *config.Config, releaseList string) ([]string, error) {
-	if strings.TrimSpace(releaseList) == "" {
-		return cfg.ReleaseKeys(), nil
-	}
-
-	releases := strings.Split(releaseList, ",")
-	for i := range releases {
-		releases[i] = strings.TrimSpace(releases[i])
-	}
-
-	for _, release := range releases {
-		if release == "" {
-			return nil, errInvalidRelease
-		}
-		if !slices.Contains(cfg.Releases, release) {
-			return nil, errInvalidRelease
-		}
-	}
-
-	return releases, nil
+	return runner.Run(ctx, cfg.ReleaseKeys())
 }

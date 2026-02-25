@@ -20,6 +20,9 @@ type Config struct {
 	ReleaseVersions map[string]string
 	Repos           []string
 	Arch            string
+	Addr            string
+	LogLevel        string
+	Force           bool
 }
 
 // Load reads configuration from environment variables, applying defaults
@@ -34,6 +37,9 @@ func Load() *Config {
 		Releases:      splitCSV(envOrDefault("MANPAGES_RELEASES", "trusty, xenial, bionic, jammy, noble, plucky, questing")),
 		Repos:         splitCSV(envOrDefault("MANPAGES_REPOS", "main, restricted, universe, multiverse")),
 		Arch:          envOrDefault("MANPAGES_ARCH", "amd64"),
+		Addr:          envOrDefault("MANPAGES_ADDR", ":8080"),
+		LogLevel:      envOrDefault("MANPAGES_LOG_LEVEL", "info"),
+		Force:         envBool("MANPAGES_FORCE"),
 	}
 	return cfg
 }
@@ -119,6 +125,11 @@ func envOrDefault(key, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+func envBool(key string) bool {
+	v, _ := strconv.ParseBool(os.Getenv(key))
+	return v
 }
 
 // loadDotEnv reads a .env file from the current working directory and

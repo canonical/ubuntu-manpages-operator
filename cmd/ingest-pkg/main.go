@@ -18,14 +18,12 @@ import (
 )
 
 func main() {
-	logLevel := flag.String("log-level", "debug", "Log level (debug, info, warn, error)")
 	release := flag.String("release", "", "Release to ingest from (required)")
 	pkgName := flag.String("package", "", "Package name to process (required)")
-	workdir := flag.String("workdir", "", "Working directory for downloads/extraction")
-	output := flag.String("output", "", "Override public HTML output directory")
 	flag.Parse()
 
-	logger := logging.BuildLogger(*logLevel)
+	cfg := config.Load()
+	logger := logging.BuildLogger(cfg.LogLevel)
 
 	if *release == "" || *pkgName == "" {
 		fmt.Fprintf(os.Stderr, "Usage: ingest-pkg -release <release> -package <name>\n\n")
@@ -33,14 +31,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := run(logger, *release, *pkgName, *workdir, *output); err != nil {
+	if err := run(logger, cfg, *release, *pkgName); err != nil {
 		logger.Error("ingest-pkg failed", "error", err)
 		os.Exit(1)
 	}
 }
 
-func run(logger *slog.Logger, release, pkgName, workDir, output string) error {
-	cfg := config.Load()
+func run(logger *slog.Logger, cfg *config.Config, release, pkgName string) error {
 	if err := cfg.Validate(); err != nil {
 		return fmt.Errorf("invalid config: %w", err)
 	}
@@ -52,21 +49,15 @@ func run(logger *slog.Logger, release, pkgName, workDir, output string) error {
 	}
 	cfg.ReleaseVersions = versions
 
-	if output != "" {
-		cfg.PublicHTMLDir = output
-	}
-
 	if !slices.Contains(cfg.Releases, release) {
 		return fmt.Errorf("unknown release %q (available: %v)", release, cfg.ReleaseKeys())
 	}
 
-	if workDir == "" {
-		workDir, err = os.MkdirTemp("", "manpages-ingest-pkg-")
-		if err != nil {
-			return fmt.Errorf("create work dir: %w", err)
-		}
-		defer func() { _ = os.RemoveAll(workDir) }()
+	workDir, err := os.MkdirTemp("", "manpages-ingest-pkg-")
+	if err != nil {
+		return fmt.Errorf("create work dir: %w", err)
 	}
+	defer func() { _ = os.RemoveAll(workDir) }()
 	logger.Info("using work directory", "path", workDir)
 
 	pkgFetcher := fetcher.New(

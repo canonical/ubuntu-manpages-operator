@@ -232,3 +232,63 @@ func TestLatestLTSReleaseSkipsOddMajor(t *testing.T) {
 		t.Errorf("LatestLTSRelease() = %q, want %q", got, "noble")
 	}
 }
+
+func TestLogLevelDefault(t *testing.T) {
+	dir := t.TempDir()
+	origDir, _ := os.Getwd()
+	_ = os.Chdir(dir)
+	t.Cleanup(func() { os.Chdir(origDir) })
+
+	t.Setenv("MANPAGES_LOG_LEVEL", "")
+
+	cfg := Load()
+	if cfg.LogLevel != "info" {
+		t.Errorf("LogLevel = %q, want %q", cfg.LogLevel, "info")
+	}
+}
+
+func TestLogLevelFromEnv(t *testing.T) {
+	dir := t.TempDir()
+	origDir, _ := os.Getwd()
+	_ = os.Chdir(dir)
+	t.Cleanup(func() { os.Chdir(origDir) })
+
+	t.Setenv("MANPAGES_LOG_LEVEL", "debug")
+
+	cfg := Load()
+	if cfg.LogLevel != "debug" {
+		t.Errorf("LogLevel = %q, want %q", cfg.LogLevel, "debug")
+	}
+}
+
+func TestForceDefault(t *testing.T) {
+	dir := t.TempDir()
+	origDir, _ := os.Getwd()
+	_ = os.Chdir(dir)
+	t.Cleanup(func() { os.Chdir(origDir) })
+
+	t.Setenv("MANPAGES_FORCE", "")
+
+	cfg := Load()
+	if cfg.Force {
+		t.Error("Force = true, want false")
+	}
+}
+
+func TestForceFromEnv(t *testing.T) {
+	dir := t.TempDir()
+	origDir, _ := os.Getwd()
+	_ = os.Chdir(dir)
+	t.Cleanup(func() { os.Chdir(origDir) })
+
+	for _, val := range []string{"true", "1", "TRUE"} {
+		t.Run(val, func(t *testing.T) {
+			t.Setenv("MANPAGES_FORCE", val)
+
+			cfg := Load()
+			if !cfg.Force {
+				t.Errorf("Force = false with MANPAGES_FORCE=%q, want true", val)
+			}
+		})
+	}
+}

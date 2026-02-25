@@ -77,16 +77,21 @@ The app is a manpage pipeline + web server. There are **three binaries**:
 
 All three read configuration from environment variables (see `.env.example`), optionally loading a `.env` file from the working directory.
 
+The `server` and `ingest` binaries have no CLI flags — all configuration comes from environment variables. The `ingest-pkg` binary accepts two required CLI flags (`-release` and `-package`) to select a single package for debugging, with remaining configuration from the environment.
+
 ### Configuration (environment variables)
 
-| Variable                   | Default                                                  | Purpose                                          |
-| -------------------------- | -------------------------------------------------------- | ------------------------------------------------ |
-| `MANPAGES_SITE`            | `https://manpages.ubuntu.com`                            | Public-facing site URL (used in sitemaps, links) |
-| `MANPAGES_ARCHIVE`         | `https://archive.ubuntu.com/ubuntu`                      | Ubuntu package archive URL                       |
-| `MANPAGES_PUBLIC_HTML_DIR` | `/app/www`                                               | Root output directory for HTML and gzip files    |
-| `MANPAGES_RELEASES`        | `trusty, xenial, bionic, jammy, noble, plucky, questing` | Comma-separated release codenames                |
-| `MANPAGES_REPOS`           | `main, restricted, universe, multiverse`                 | Ubuntu repos to scan                             |
-| `MANPAGES_ARCH`            | `amd64`                                                  | Architecture to fetch packages for               |
+| Variable                   | Default                                                  | Purpose                                                |
+| -------------------------- | -------------------------------------------------------- | ------------------------------------------------------ |
+| `MANPAGES_SITE`            | `https://manpages.ubuntu.com`                            | Public-facing site URL (used in sitemaps, links)       |
+| `MANPAGES_ARCHIVE`         | `https://archive.ubuntu.com/ubuntu`                      | Ubuntu package archive URL                             |
+| `MANPAGES_PUBLIC_HTML_DIR` | `/app/www`                                               | Root output directory for HTML and gzip files          |
+| `MANPAGES_RELEASES`        | `trusty, xenial, bionic, jammy, noble, plucky, questing` | Comma-separated release codenames                      |
+| `MANPAGES_REPOS`           | `main, restricted, universe, multiverse`                 | Ubuntu repos to scan                                   |
+| `MANPAGES_ARCH`            | `amd64`                                                  | Architecture to fetch packages for                     |
+| `MANPAGES_ADDR`            | `:8080`                                                  | HTTP bind address (server only)                        |
+| `MANPAGES_LOG_LEVEL`       | `info`                                                   | Log level (debug, info, warn, error)                   |
+| `MANPAGES_FORCE`           | `false`                                                  | Force reprocessing of all packages (ignore SHA1 cache) |
 
 ### Ingest Pipeline
 
@@ -137,8 +142,14 @@ go build -o bin/ingest-pkg ./cmd/ingest-pkg
 cp .env.example .env   # edit as needed
 ./bin/server
 
-# Ingest manpages for a specific release
-./bin/ingest -release noble
+# Ingest manpages for all configured releases
+./bin/ingest
+
+# Ingest a subset of releases
+MANPAGES_RELEASES=noble ./bin/ingest
+
+# Force reprocessing (ignore SHA1 cache)
+MANPAGES_FORCE=true ./bin/ingest
 
 # Ingest a single package (for debugging)
 ./bin/ingest-pkg -release noble -package coreutils
@@ -266,13 +277,14 @@ rockcraft pack --verbose
 
 ## Common Tasks
 
-| Task               | Command                                                     |
-| ------------------ | ----------------------------------------------------------- |
-| Run unit tests     | `make unit`                                                 |
-| Lint               | `make lint`                                                 |
-| Format             | `make format`                                               |
-| Build charm        | `charmcraft pack --verbose`                                 |
-| Build OCI image    | `rockcraft pack --verbose`                                  |
-| Local server       | `go run ./cmd/server`                                       |
-| Ingest one release | `go run ./cmd/ingest`                                       |
-| Ingest one package | `go run ./cmd/ingest-pkg -release noble -package coreutils` |
+| Task                | Command                                                     |
+| ------------------- | ----------------------------------------------------------- |
+| Run unit tests      | `make unit`                                                 |
+| Lint                | `make lint`                                                 |
+| Format              | `make format`                                               |
+| Build charm         | `charmcraft pack --verbose`                                 |
+| Build OCI image     | `rockcraft pack --verbose`                                  |
+| Local server        | `go run ./cmd/server`                                       |
+| Ingest all releases | `go run ./cmd/ingest`                                       |
+| Ingest one release  | `MANPAGES_RELEASES=noble go run ./cmd/ingest`               |
+| Ingest one package  | `go run ./cmd/ingest-pkg -release noble -package coreutils` |

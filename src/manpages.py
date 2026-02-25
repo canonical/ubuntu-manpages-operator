@@ -45,6 +45,7 @@ class Manpages:
             "MANPAGES_PUBLIC_HTML_DIR": str(WWW_DIR),
             "MANPAGES_REPOS": "main, restricted, universe, multiverse",
             "MANPAGES_ARCH": "amd64",
+            "MANPAGES_LOG_LEVEL": "info",
         }
 
         return ops.pebble.Layer(
