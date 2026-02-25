@@ -12,12 +12,23 @@ type Searcher interface {
 	Close() error
 }
 
+// MatchType describes how a search result matched the query.
+type MatchType string
+
+const (
+	MatchExact    MatchType = "exact"    // Case-insensitive exact match.
+	MatchPrefix   MatchType = "prefix"   // Query is a prefix of the command name.
+	MatchContains MatchType = "contains" // Query appears as a substring of the command name.
+	MatchFuzzy    MatchType = "fuzzy"    // Within Damerau-Levenshtein distance threshold.
+)
+
 // Result represents a single search result.
 type Result struct {
-	Title   string `json:"title"`
-	Path    string `json:"path"`
-	Distro  string `json:"distro"`
-	Section int    `json:"section"`
+	Title     string    `json:"title"`
+	Path      string    `json:"path"`
+	Distro    string    `json:"distro"`
+	Section   int       `json:"section"`
+	MatchType MatchType `json:"match_type"`
 }
 
 // SearchResponse is the paginated response returned by a Searcher.
