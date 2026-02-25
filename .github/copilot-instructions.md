@@ -34,7 +34,7 @@ internal/             # Go internal packages
   launchpad/          #   Resolves release codenames → version numbers via Launchpad API
   logging/            #   Structured slog logger setup
   pipeline/           #   Orchestrates extraction, conversion, transformation, and storage
-  search/             #   Filesystem-based manpage search (no database)
+  search/             #   In-memory indexed manpage search (with fuzzy matching via Damerau-Levenshtein)
   sitemap/            #   XML sitemap generation
   storage/            #   Filesystem-based HTML/gzip storage with per-package SHA1 cache
   transform/          #   8-stage HTML transformation pipeline (mandoc output → web-ready HTML)
@@ -75,7 +75,7 @@ The app is a manpage pipeline + web server. There are **three binaries**:
 | `cmd/ingest`     | Bulk ingestion — fetches all packages for configured releases, converts manpages, writes HTML |
 | `cmd/ingest-pkg` | Single-package ingestion — for development/debugging a specific package                       |
 
-All three read configuration from environment variables (see `.env.example`), optionally loading a `.env` file from the working directory.
+All three read configuration from environment variables (see `.env.example`), optionally loading a `.env` file from the working directory. Each binary creates a structured logger via `logging.BuildLogger()` and immediately calls `slog.SetDefault(logger)` so that any `slog` package-level calls throughout the codebase use the same `TextHandler` format.
 
 The `server` and `ingest` binaries have no CLI flags — all configuration comes from environment variables. The `ingest-pkg` binary accepts two required CLI flags (`-release` and `-package`) to select a single package for debugging, with remaining configuration from the environment.
 
@@ -128,7 +128,7 @@ Failures are non-fatal per manpage — errors are logged and counted. A summary 
 | `GET /llms.txt`, `/llms-full.txt`                  | LLM-friendly documentation                      |
 | `GET /static/...`                                  | CSS/JS with content-hash ETag                   |
 
-Search is filesystem-based (no database). It scans `manpages/{release}/man{1-9}/` directories, matching filenames with exact → prefix ranking.
+Search uses an in-memory filename index (no database). At startup, `FSSearcher` scans `manpages/{release}/man{1-9}/` directories once and builds an index of lowercased command names, then logs the index size and build duration. Searches match against this index in four tiers: exact (case-insensitive) → prefix → substring (contains) → fuzzy (Damerau-Levenshtein distance). The DL function has a bounded variant (`damerauLevenshteinBounded`) with length pre-filtering and early row termination for fast rejection of dissimilar strings. Fuzzy matching uses an adaptive distance threshold based on query length (≤2 → disabled, 3-4 → max distance 1, ≥5 → max distance 2), plus fuzzy prefix matching for command names ≥3 characters. Fuzzy results are capped at 10 to limit noise. The `Result` struct carries a `MatchType` field (`exact`, `prefix`, `contains`, `fuzzy`) exposed in the JSON API. The search page is server-rendered on initial load (one release, defaulting to the newest), but release tab switching is handled client-side via `search.js` — clicking a tab fetches results from `/api/search` and swaps them into the DOM without a page reload (progressive enhancement: tabs are still regular `<a>` links if JS is unavailable). `pushState` keeps the URL in sync so back/forward navigation works between tabs. Fuzzy results appear in a separate "Similar matches" section. The index can be refreshed with `Rebuild()`. Language-filtered searches fall back to filesystem scanning.
 
 ### Template Layouts
 
@@ -140,6 +140,8 @@ The server uses two distinct HTML layouts with shared partials:
 - **`nav.html`** — Shared partial defining `{{ define "header" }}` with the full `<header>` element (logo, mobile toggles, navigation links, Releases dropdown). Used by both layouts via `{{ template "header" . }}`.
 - **`footer.html`** — Shared partial defining `{{ define "footer" }}` with the site footer (project links, copyright, build revision). Used by both layouts.
 - **`search-form.html`** — Shared partial defining `{{ define "search-inputs" }}` with the search box form elements (input, reset, submit). Used by `base.html` (docs header) and `index.html` (landing page).
+
+The `base.html` layout provides a `{{ block "scripts" . }}` hook just after `app.js` for page-specific scripts. The search template uses this to load `search.js`.
 
 ### Building and Running Locally
 
@@ -235,7 +237,7 @@ See [CONTRIBUTING.md](../CONTRIBUTING.md) for development workflow, build instru
 
 ## Key Design Decisions
 
-- **No database**: Both storage and search are filesystem-based. The generated HTML tree _is_ the data store, with SHA1 files as the package cache.
+- **No database**: Storage is filesystem-based — the generated HTML tree _is_ the data store, with SHA1 files as the package cache. Search uses an in-memory filename index built at startup by scanning the HTML tree; no external search engine or database is needed.
 - **Two-service model**: The server runs continuously; the ingestion process runs once and exits. Pebble's `on-success: ignore` prevents the charm from restarting it after completion.
 - **mandoc for conversion**: The `mandoc` utility converts roff to HTML. It's installed as a stage package in the rock.
 - **8-stage HTML pipeline**: Raw `mandoc` output is transformed through multiple stages to produce web-ready HTML with proper links, TOC, metadata, and structure.

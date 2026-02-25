@@ -46,6 +46,7 @@ The server binary serves the generated HTML manpages along with search, browse, 
 ### Key design decisions
 
 - **No database** — Both storage and search are filesystem-based. The generated HTML tree _is_ the data store, with SHA1 files as the package cache.
+- **Fuzzy search** — Search matches in four tiers: exact, prefix, substring (contains), and fuzzy (Damerau-Levenshtein distance). Fuzzy results are shown in a separate "Similar matches" section so typos like `grpe` still find `grep`. The JSON API exposes the `match_type` field on each result.
 - **mandoc for conversion** — The `mandoc` utility converts roff to HTML. It is installed as a stage package in the OCI image.
 - **Metadata in HTML comments** — Each generated manpage embeds a `<!--META:{...}-->` JSON comment containing title, description, package info, and TOC. The server parses this at serve time for rendering and search enrichment.
 
