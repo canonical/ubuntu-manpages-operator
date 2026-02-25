@@ -235,6 +235,18 @@ See [CONTRIBUTING.md](../CONTRIBUTING.md) for development workflow, build instru
 
 ---
 
+## JavaScript Conventions
+
+All JavaScript in `internal/web/static/` uses modern ES6/7 syntax:
+
+- **`const` / `let`** — never `var`. Use `const` by default; `let` only when reassignment is needed.
+- **Arrow functions** — use `() => {}` for all callbacks and inner functions. Use `e.currentTarget` instead of `this` in event handlers.
+- **Template literals** — use backtick strings with `${}` interpolation instead of string concatenation.
+- **Modern iterators** — prefer `for...of`, `.map()`, `.filter()`, `.forEach()` over traditional `for (var i = 0; ...)` loops.
+- **IIFE pattern** — use `;(() => { ... })()` for scoped blocks.
+
+---
+
 ## Key Design Decisions
 
 - **No database**: Storage is filesystem-based — the generated HTML tree _is_ the data store, with SHA1 files as the package cache. Search uses an in-memory filename index built at startup by scanning the HTML tree; no external search engine or database is needed.

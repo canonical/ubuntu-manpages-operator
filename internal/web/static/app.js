@@ -1,14 +1,14 @@
 // Drawer toggle for mobile side navigation.
-;(function () {
-  var drawer = document.querySelector("[class*='p-side-navigation']")
+;(() => {
+  const drawer = document.querySelector("[class*='p-side-navigation']")
   if (!drawer) return
-  document.querySelectorAll(".js-drawer-toggle").forEach(function (toggle) {
-    toggle.addEventListener("click", function (e) {
+  document.querySelectorAll(".js-drawer-toggle").forEach((toggle) => {
+    toggle.addEventListener("click", (e) => {
       e.preventDefault()
       drawer.classList.toggle("is-expanded")
     })
   })
-  document.addEventListener("keyup", function (e) {
+  document.addEventListener("keyup", (e) => {
     if (e.key === "Escape" && drawer.classList.contains("is-expanded")) {
       drawer.classList.remove("is-expanded")
     }
@@ -16,34 +16,34 @@
 })()
 
 // Navigation dropdown toggle.
-;(function () {
-  var dropdowns = document.querySelectorAll(".p-navigation__item--dropdown-toggle")
-  dropdowns.forEach(function (dropdown) {
-    var toggle = dropdown.querySelector(".p-navigation__link")
+;(() => {
+  const dropdowns = document.querySelectorAll(".p-navigation__item--dropdown-toggle")
+  dropdowns.forEach((dropdown) => {
+    const toggle = dropdown.querySelector(".p-navigation__link")
     if (!toggle) return
-    toggle.addEventListener("click", function (e) {
+    toggle.addEventListener("click", (e) => {
       e.preventDefault()
-      var isOpen = dropdown.classList.contains("is-active")
+      const isOpen = dropdown.classList.contains("is-active")
       // Close all dropdowns first.
-      dropdowns.forEach(function (d) {
+      dropdowns.forEach((d) => {
         d.classList.remove("is-active")
-        var menu = d.querySelector(".p-navigation__dropdown--right, .p-navigation__dropdown")
+        const menu = d.querySelector(".p-navigation__dropdown--right, .p-navigation__dropdown")
         if (menu) menu.setAttribute("aria-hidden", "true")
       })
       if (!isOpen) {
         dropdown.classList.add("is-active")
-        var menu = dropdown.querySelector(
+        const menu = dropdown.querySelector(
           ".p-navigation__dropdown--right, .p-navigation__dropdown"
         )
         if (menu) menu.setAttribute("aria-hidden", "false")
       }
     })
   })
-  document.addEventListener("click", function (e) {
+  document.addEventListener("click", (e) => {
     if (!e.target.closest(".p-navigation__item--dropdown-toggle")) {
-      dropdowns.forEach(function (d) {
+      dropdowns.forEach((d) => {
         d.classList.remove("is-active")
-        var menu = d.querySelector(".p-navigation__dropdown--right, .p-navigation__dropdown")
+        const menu = d.querySelector(".p-navigation__dropdown--right, .p-navigation__dropdown")
         if (menu) menu.setAttribute("aria-hidden", "true")
       })
     }
@@ -51,27 +51,27 @@
 })()
 
 // Prefill search input from URL query parameter.
-;(function () {
-  var input = document.querySelector("#search-docs .p-search-box__input")
+;(() => {
+  const input = document.querySelector("#search-docs .p-search-box__input")
   if (!input) return
-  var q = new URLSearchParams(window.location.search).get("q")
+  const q = new URLSearchParams(window.location.search).get("q")
   if (q) input.value = q
 })()
 
 // Per-page selector for browse listings.
-;(function () {
-  var sel = document.getElementById("browse-per-page")
+;(() => {
+  const sel = document.getElementById("browse-per-page")
   if (!sel) return
-  sel.addEventListener("change", function () {
-    var params = new URLSearchParams(window.location.search)
-    var perPage = parseInt(this.value, 10)
+  sel.addEventListener("change", () => {
+    const params = new URLSearchParams(window.location.search)
+    const perPage = parseInt(sel.value, 10)
     params.delete("page")
     if (perPage === 25) {
       params.delete("per_page")
     } else {
       params.set("per_page", perPage)
     }
-    var qs = params.toString()
-    window.location.href = sel.dataset.path + (qs ? "?" + qs : "")
+    const qs = params.toString()
+    window.location.href = sel.dataset.path + (qs ? `?${qs}` : "")
   })
 })()

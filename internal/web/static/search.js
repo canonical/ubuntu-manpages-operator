@@ -1,137 +1,109 @@
 // Client-side search tab switching — fetches results via /api/search
 // and swaps them into the DOM without a full page reload.
 // Progressive enhancement: if JS fails, tabs are regular <a> links.
-;(function () {
-  var container = document.getElementById("search-results")
+;(() => {
+  const container = document.getElementById("search-results")
   if (!container) return
 
-  var query = container.dataset.query
+  const query = container.dataset.query
   if (!query) return
 
-  var tabs = container.querySelectorAll(".p-tabs__link")
+  const tabs = container.querySelectorAll(".p-tabs__link")
   if (!tabs.length) return
 
-  var defaultLimit = 20
-  var limitSelect = document.getElementById("search-limit")
-  function getLimit() {
-    return limitSelect ? parseInt(limitSelect.value, 10) || defaultLimit : defaultLimit
-  }
+  const defaultLimit = 20
+  const limitSelect = document.getElementById("search-limit")
+  const getLimit = () =>
+    limitSelect ? parseInt(limitSelect.value, 10) || defaultLimit : defaultLimit
 
   // Separators used by the Go SplitManpageTitle function, tried in order.
-  var titleSeparators = [" -- ", " - ", " \u2013 ", " \u2014 "]
+  const titleSeparators = [" -- ", " - ", " \u2013 ", " \u2014 "]
 
-  function splitTitle(title) {
-    for (var i = 0; i < titleSeparators.length; i++) {
-      var idx = title.indexOf(titleSeparators[i])
+  const splitTitle = (title) => {
+    for (const sep of titleSeparators) {
+      const idx = title.indexOf(sep)
       if (idx >= 0) {
         return {
           name: title.substring(0, idx).trim(),
-          desc: title.substring(idx + titleSeparators[i].length).trim(),
+          desc: title.substring(idx + sep.length).trim(),
         }
       }
     }
     return { name: title, desc: "" }
   }
 
-  function escapeHTML(str) {
-    var div = document.createElement("div")
+  const escapeHTML = (str) => {
+    const div = document.createElement("div")
     div.appendChild(document.createTextNode(str))
     return div.innerHTML
   }
 
-  function renderResultItem(r) {
-    var parts = splitTitle(r.title)
-    var meta = "man(" + r.section + ")"
+  const renderResultItem = (r) => {
+    const parts = splitTitle(r.title)
+    let meta = `man(${r.section})`
     if (parts.desc) {
-      meta += " &middot; " + escapeHTML(parts.desc)
+      meta += ` &middot; ${escapeHTML(parts.desc)}`
     }
     return (
-      '<li class="p-list__item">' +
-      '<a href="' +
-      escapeHTML(r.path) +
-      '">' +
-      escapeHTML(parts.name) +
-      "</a>" +
-      '<div class="mp-search-meta">' +
-      meta +
-      "</div>" +
-      "</li>"
+      `<li class="p-list__item">` +
+      `<a href="${escapeHTML(r.path)}">${escapeHTML(parts.name)}</a>` +
+      `<div class="mp-search-meta">${meta}</div>` +
+      `</li>`
     )
   }
 
-  function renderResults(data) {
-    // Split results into non-fuzzy and fuzzy.
-    var exact = []
-    var fuzzy = []
-    for (var i = 0; i < data.results.length; i++) {
-      var r = data.results[i]
-      if (r.match_type === "fuzzy") {
-        fuzzy.push(r)
-      } else {
-        exact.push(r)
-      }
-    }
+  const renderResults = (data) => {
+    const exact = data.results.filter((r) => r.match_type !== "fuzzy")
+    const fuzzy = data.results.filter((r) => r.match_type === "fuzzy")
 
-    var html = ""
-    var nonFuzzyTotal = exact.length
+    const nonFuzzyTotal = exact.length
 
     if (nonFuzzyTotal > 0) {
-      html +=
-        '<div class="u-text--muted mp-search-summary">' +
-        nonFuzzyTotal +
-        " result" +
-        (nonFuzzyTotal !== 1 ? "s" : "") +
-        " found.</div>"
-      html += '<div role="tabpanel" tabindex="0"><ul class="p-list">'
-      for (var i = 0; i < exact.length; i++) {
-        html += renderResultItem(exact[i])
-      }
-      html += "</ul>"
+      const summary =
+        `<div class="u-text--muted mp-search-summary">` +
+        `${nonFuzzyTotal} result${nonFuzzyTotal !== 1 ? "s" : ""} found.</div>`
+      const exactItems = exact.map((r) => renderResultItem(r)).join("")
+      let html = `${summary}<div role="tabpanel" tabindex="0"><ul class="p-list">${exactItems}</ul>`
       if (fuzzy.length > 0) {
-        html += '<p class="p-heading--5">Similar matches</p>'
-        html += '<ul class="p-list">'
-        for (var j = 0; j < fuzzy.length; j++) {
-          html += renderResultItem(fuzzy[j])
-        }
-        html += "</ul>"
+        const fuzzyItems = fuzzy.map((r) => renderResultItem(r)).join("")
+        html +=
+          `<p class="p-heading--5">Similar matches</p>` +
+          `<ul class="p-list">${fuzzyItems}</ul>`
       }
-      html += "</div>"
-    } else if (fuzzy.length > 0) {
-      html += '<p class="u-text--muted mp-search-summary">No exact results found.</p>'
-      html += '<div role="tabpanel" tabindex="0">'
-      html += '<p class="p-heading--5">Similar matches</p>'
-      html += '<ul class="p-list">'
-      for (var j = 0; j < fuzzy.length; j++) {
-        html += renderResultItem(fuzzy[j])
-      }
-      html += "</ul></div>"
-    } else {
-      html += '<p class="u-text--muted mp-search-summary">No results found.</p>'
+      return html + "</div>"
     }
 
-    return html
+    if (fuzzy.length > 0) {
+      const fuzzyItems = fuzzy.map((r) => renderResultItem(r)).join("")
+      return (
+        `<p class="u-text--muted mp-search-summary">No exact results found.</p>` +
+        `<div role="tabpanel" tabindex="0">` +
+        `<p class="p-heading--5">Similar matches</p>` +
+        `<ul class="p-list">${fuzzyItems}</ul></div>`
+      )
+    }
+
+    return `<p class="u-text--muted mp-search-summary">No results found.</p>`
   }
 
-  function showSpinner() {
-    var target = container.querySelector("[data-search-results-area]")
+  const showSpinner = () => {
+    const target = container.querySelector("[data-search-results-area]")
     if (!target) return
     target.innerHTML =
-      '<div class="u-align--center" style="padding: 2rem 0">' +
-      '<i class="p-icon--spinner u-animation--spin"></i>' +
-      " Loading\u2026" +
-      "</div>"
+      `<div class="u-align--center" style="padding: 2rem 0">` +
+      `<i class="p-icon--spinner u-animation--spin"></i> Loading\u2026</div>`
   }
 
-  function showError() {
-    var target = container.querySelector("[data-search-results-area]")
+  const showError = () => {
+    const target = container.querySelector("[data-search-results-area]")
     if (!target) return
-    target.innerHTML = '<p class="u-text--muted mp-search-summary">Search is unavailable.</p>'
+    target.innerHTML = `<p class="u-text--muted mp-search-summary">Search is unavailable.</p>`
   }
 
   // buildSearchURL constructs a URL with query, release, and limit params.
   // The limit param is omitted when it equals the default.
-  function buildSearchURL(release, limit) {
-    var params = new URLSearchParams(window.location.search)
+  const buildSearchURL = (release, limit) => {
+    const params = new URLSearchParams(window.location.search)
     params.set("q", query)
     params.set("release", release)
     if (limit !== defaultLimit) {
@@ -139,55 +111,49 @@
     } else {
       params.delete("limit")
     }
-    return window.location.pathname + "?" + params.toString()
+    return `${window.location.pathname}?${params.toString()}`
   }
 
-  function updateResults(release) {
-    var target = container.querySelector("[data-search-results-area]")
+  const updateResults = (release) => {
+    const target = container.querySelector("[data-search-results-area]")
     if (!target) return
 
     showSpinner()
 
-    var url =
-      "/api/search?q=" +
-      encodeURIComponent(query) +
-      "&release=" +
-      encodeURIComponent(release) +
-      "&limit=" +
-      getLimit()
+    const url = `/api/search?q=${encodeURIComponent(query)}&release=${encodeURIComponent(release)}&limit=${getLimit()}`
 
     fetch(url)
-      .then(function (resp) {
-        if (!resp.ok) throw new Error("HTTP " + resp.status)
+      .then((resp) => {
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
         return resp.json()
       })
-      .then(function (data) {
+      .then((data) => {
         if (!data.results) data.results = []
         target.innerHTML = renderResults(data)
       })
-      .catch(function () {
+      .catch(() => {
         showError()
       })
   }
 
-  function setActiveTab(release) {
-    tabs.forEach(function (tab) {
-      var tabRelease = tab.dataset.release
+  const setActiveTab = (release) => {
+    tabs.forEach((tab) => {
+      const tabRelease = tab.dataset.release
       tab.setAttribute("aria-selected", tabRelease === release ? "true" : "false")
     })
   }
 
-  function handleTabClick(e) {
+  const handleTabClick = (e) => {
     e.preventDefault()
-    var release = this.dataset.release
+    const release = e.currentTarget.dataset.release
     if (!release) return
 
     setActiveTab(release)
     container.dataset.release = release
 
-    var limit = getLimit()
+    const limit = getLimit()
     history.pushState(
-      { query: query, release: release, limit: limit },
+      { query, release, limit },
       "",
       buildSearchURL(release, limit)
     )
@@ -196,19 +162,19 @@
   }
 
   // Attach click handlers to all tabs.
-  tabs.forEach(function (tab) {
+  tabs.forEach((tab) => {
     tab.addEventListener("click", handleTabClick)
   })
 
   // Handle limit selector changes.
   if (limitSelect) {
-    limitSelect.addEventListener("change", function () {
-      var release = container.dataset.release
-      var limit = getLimit()
+    limitSelect.addEventListener("change", () => {
+      const release = container.dataset.release
+      const limit = getLimit()
       container.dataset.limit = limit
 
       history.pushState(
-        { query: query, release: release, limit: limit },
+        { query, release, limit },
         "",
         buildSearchURL(release, limit)
       )
@@ -218,15 +184,15 @@
   }
 
   // Handle back/forward navigation.
-  window.addEventListener("popstate", function (e) {
-    var release
-    var limit
+  window.addEventListener("popstate", (e) => {
+    let release
+    let limit
     if (e.state && e.state.release) {
       release = e.state.release
       limit = e.state.limit
     } else {
       // Fall back to URL query params.
-      var params = new URLSearchParams(window.location.search)
+      const params = new URLSearchParams(window.location.search)
       release = params.get("release")
       limit = parseInt(params.get("limit"), 10) || defaultLimit
     }
@@ -242,8 +208,8 @@
   })
 
   // Replace the initial history entry so popstate works correctly.
-  var initialRelease = container.dataset.release
+  const initialRelease = container.dataset.release
   if (initialRelease) {
-    history.replaceState({ query: query, release: initialRelease, limit: getLimit() }, "")
+    history.replaceState({ query, release: initialRelease, limit: getLimit() }, "")
   }
 })()
