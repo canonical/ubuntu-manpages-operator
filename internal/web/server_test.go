@@ -3,6 +3,7 @@ package web
 import (
 	"bytes"
 	"compress/gzip"
+	"fmt"
 	"io"
 	"io/fs"
 	"log/slog"
@@ -530,6 +531,147 @@ func TestBrowseURLWithPlusChar(t *testing.T) {
 	if strings.Contains(text, "%2B") {
 		t.Errorf("href should not contain percent-encoded +, got:\n%s", text)
 	}
+}
+
+func TestBrowsePagination(t *testing.T) {
+	srv, cfg := testServer(t)
+
+	// Create 250 manpage files to trigger pagination (page size = 25).
+	manDir := filepath.Join(cfg.PublicHTMLDir, "manpages", "noble", "man1")
+	for i := 0; i < 250; i++ {
+		name := fmt.Sprintf("cmd%03d.1.html", i)
+		if err := os.WriteFile(filepath.Join(manDir, name), []byte("<p>test</p>"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// 250 + 1 (ls.1.html from testServer) = 251 files, ceil(251/25) = 11 pages.
+	t.Run("default page is 1", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/manpages/noble/man1/", nil)
+		w := httptest.NewRecorder()
+		srv.handleManpages(w, req)
+
+		body, _ := io.ReadAll(w.Result().Body)
+		text := string(body)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d", w.Code)
+		}
+		// Page 1 should have the active page link.
+		if !strings.Contains(text, `is-active`) {
+			t.Error("expected active page indicator")
+		}
+		if !strings.Contains(text, "p-pagination") {
+			t.Error("expected pagination controls")
+		}
+		if !strings.Contains(text, "cmd000") {
+			t.Error("expected cmd000 on page 1")
+		}
+		// Should show total count.
+		if !strings.Contains(text, "251 manpages") {
+			t.Error("expected total file count")
+		}
+	})
+
+	t.Run("page 2", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/manpages/noble/man1/?page=2", nil)
+		w := httptest.NewRecorder()
+		srv.handleManpages(w, req)
+
+		body, _ := io.ReadAll(w.Result().Body)
+		text := string(body)
+
+		if !strings.Contains(text, "p-pagination") {
+			t.Error("expected pagination controls on page 2")
+		}
+	})
+
+	t.Run("page beyond max clamps to last page", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/manpages/noble/man1/?page=999", nil)
+		w := httptest.NewRecorder()
+		srv.handleManpages(w, req)
+
+		body, _ := io.ReadAll(w.Result().Body)
+		text := string(body)
+
+		// Last page (11) should be the active link.
+		if !strings.Contains(text, `aria-current="page"`) {
+			t.Error("expected current page indicator on last page")
+		}
+	})
+
+	t.Run("negative page defaults to 1", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/manpages/noble/man1/?page=-5", nil)
+		w := httptest.NewRecorder()
+		srv.handleManpages(w, req)
+
+		body, _ := io.ReadAll(w.Result().Body)
+		text := string(body)
+
+		if !strings.Contains(text, "cmd000") {
+			t.Error("expected first-page content when negative page given")
+		}
+	})
+
+	t.Run("no pagination when few files", func(t *testing.T) {
+		man9 := filepath.Join(cfg.PublicHTMLDir, "manpages", "noble", "man9")
+		if err := os.MkdirAll(man9, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		for i := 0; i < 5; i++ {
+			name := fmt.Sprintf("few%d.9.html", i)
+			if err := os.WriteFile(filepath.Join(man9, name), []byte("<p>test</p>"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+		}
+
+		req := httptest.NewRequest(http.MethodGet, "/manpages/noble/man9/", nil)
+		w := httptest.NewRecorder()
+		srv.handleManpages(w, req)
+
+		body, _ := io.ReadAll(w.Result().Body)
+		text := string(body)
+
+		if strings.Contains(text, "p-pagination__items") {
+			t.Error("expected no pagination for small file list")
+		}
+	})
+
+	t.Run("custom per_page", func(t *testing.T) {
+		// With per_page=50, 251 files → ceil(251/50) = 6 pages.
+		req := httptest.NewRequest(http.MethodGet, "/manpages/noble/man1/?per_page=50", nil)
+		w := httptest.NewRecorder()
+		srv.handleManpages(w, req)
+
+		body, _ := io.ReadAll(w.Result().Body)
+		text := string(body)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d", w.Code)
+		}
+		// The per_page select should have 50 selected.
+		if !strings.Contains(text, `value="50" selected`) {
+			t.Error("expected per_page=50 to be selected")
+		}
+		// Page links should preserve per_page.
+		if !strings.Contains(text, "per_page=50") {
+			t.Error("expected page links to include per_page=50")
+		}
+	})
+
+	t.Run("invalid per_page falls back to default", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/manpages/noble/man1/?per_page=99", nil)
+		w := httptest.NewRecorder()
+		srv.handleManpages(w, req)
+
+		body, _ := io.ReadAll(w.Result().Body)
+		text := string(body)
+
+		// Should fall back to default 25, so 251/25 = 11 pages.
+		if !strings.Contains(text, `value="25" selected`) {
+			t.Error("expected default per_page=25 to be selected for invalid value")
+		}
+	})
 }
 
 func TestSuffixedVariantRedirect(t *testing.T) {

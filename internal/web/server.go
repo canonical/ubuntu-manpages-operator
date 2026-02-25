@@ -107,6 +107,49 @@ func readVCSRevision() string {
 func NewServer(cfg *config.Config, logger *slog.Logger) *Server {
 	funcMap := template.FuncMap{
 		"commitHash": func() string { return vcsRevision },
+		"sub":        func(a, b int) int { return a - b },
+		"add":        func(a, b int) int { return a + b },
+		"pageURL": func(path string, page, perPage int) string {
+			if page <= 1 && perPage == defaultBrowsePageSize {
+				return path
+			}
+			var params []string
+			if page > 1 {
+				params = append(params, fmt.Sprintf("page=%d", page))
+			}
+			if perPage != defaultBrowsePageSize {
+				params = append(params, fmt.Sprintf("per_page=%d", perPage))
+			}
+			if len(params) == 0 {
+				return path
+			}
+			return path + "?" + strings.Join(params, "&")
+		},
+		"pageNums": func(current, total int) []int {
+			if total <= 7 {
+				nums := make([]int, total)
+				for i := range nums {
+					nums[i] = i + 1
+				}
+				return nums
+			}
+			// Use 0 as a sentinel for truncation ellipsis.
+			var nums []int
+			nums = append(nums, 1)
+			if current > 3 {
+				nums = append(nums, 0)
+			}
+			for p := current - 1; p <= current+1; p++ {
+				if p > 1 && p < total {
+					nums = append(nums, p)
+				}
+			}
+			if current < total-2 {
+				nums = append(nums, 0)
+			}
+			nums = append(nums, total)
+			return nums
+		},
 	}
 	parse := func(files ...string) *template.Template {
 		return template.Must(template.New("").Funcs(funcMap).ParseFS(webAssets, files...))
@@ -474,17 +517,22 @@ type breadcrumb struct {
 }
 
 type browseView struct {
-	ActiveNav    string
-	Title        string
-	Releases     []indexRelease
-	Breadcrumbs  []breadcrumb
-	Sections     []browseEntry
-	Dirs         []browseEntry
-	Files        []browseEntry
-	FileCount    int
-	SiteURL      string
-	CanonicalURL string
-	JSONLD       template.HTML
+	ActiveNav      string
+	Title          string
+	Releases       []indexRelease
+	Breadcrumbs    []breadcrumb
+	Sections       []browseEntry
+	Dirs           []browseEntry
+	Files          []browseEntry
+	FileCount      int
+	Page           int
+	TotalPages     int
+	PerPage        int
+	PerPageOptions []int
+	PagePath       string
+	SiteURL        string
+	CanonicalURL   string
+	JSONLD         template.HTML
 }
 
 func (s *Server) handleManpages(w http.ResponseWriter, r *http.Request) {
@@ -600,19 +648,46 @@ func (s *Server) handleManpages(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Paginate files.
+	perPage := parseBrowsePerPage(r)
+	totalFiles := len(files)
+	totalPages := 1
+	page := 1
+	if totalFiles > perPage {
+		totalPages = (totalFiles + perPage - 1) / perPage
+		page = parseIntQuery(r, "page", 1)
+		if page < 1 {
+			page = 1
+		}
+		if page > totalPages {
+			page = totalPages
+		}
+		start := (page - 1) * perPage
+		end := start + perPage
+		if end > totalFiles {
+			end = totalFiles
+		}
+		files = files[start:end]
+	}
+
 	siteURL := s.cfg.SiteURL()
 	view := browseView{
-		ActiveNav:    "browse",
-		Title:        title,
-		Releases:     buildIndexView(s.cfg).Releases,
-		Breadcrumbs:  crumbs,
-		Sections:     sections,
-		Dirs:         dirs,
-		Files:        files,
-		FileCount:    len(files),
-		SiteURL:      siteURL,
-		CanonicalURL: siteURL + clean,
-		JSONLD:       buildBrowseJSONLD(siteURL, crumbs),
+		ActiveNav:      "browse",
+		Title:          title,
+		Releases:       buildIndexView(s.cfg).Releases,
+		Breadcrumbs:    crumbs,
+		Sections:       sections,
+		Dirs:           dirs,
+		Files:          files,
+		FileCount:      totalFiles,
+		Page:           page,
+		TotalPages:     totalPages,
+		PerPage:        perPage,
+		PerPageOptions: browsePerPageOptions,
+		PagePath:       r.URL.Path,
+		SiteURL:        siteURL,
+		CanonicalURL:   siteURL + clean,
+		JSONLD:         buildBrowseJSONLD(siteURL, crumbs),
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -623,6 +698,23 @@ func (s *Server) handleManpages(w http.ResponseWriter, r *http.Request) {
 
 func isManSection(name string) bool {
 	return len(name) == 4 && strings.HasPrefix(name, "man") && name[3] >= '1' && name[3] <= '9'
+}
+
+const defaultBrowsePageSize = 25
+
+var browsePerPageOptions = []int{25, 50, 100, 200}
+
+// parseBrowsePerPage reads the per_page query parameter and returns
+// a validated page size. Only values in browsePerPageOptions are accepted;
+// anything else falls back to the default.
+func parseBrowsePerPage(r *http.Request) int {
+	v := parseIntQuery(r, "per_page", defaultBrowsePageSize)
+	for _, opt := range browsePerPageOptions {
+		if v == opt {
+			return v
+		}
+	}
+	return defaultBrowsePageSize
 }
 
 // findSuffixedVariant handles cross-reference section suffix mismatches.

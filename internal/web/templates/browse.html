@@ -1,17 +1,12 @@
-{{ define "title" }}{{ .Title }} | Ubuntu Manpages{{ end }}
-
-{{ define "head-meta" }}
-    <meta name="description" content="Browse Ubuntu manpages: {{ .Title }}" />
-    <link rel="canonical" href="{{ .CanonicalURL }}" />
-    <meta property="og:title" content="{{ .Title }} | Ubuntu Manpages" />
-    <meta property="og:description" content="Browse Ubuntu manpages: {{ .Title }}" />
-    <meta property="og:url" content="{{ .CanonicalURL }}" />
-    <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="Ubuntu Manpages" />
-    {{ .JSONLD }}
-{{ end }}
-
-{{ define "page-title" }}
+{{ define "title" }}{{ .Title }} | Ubuntu Manpages{{ end }} {{ define "head-meta" }}
+<meta name="description" content="Browse Ubuntu manpages: {{ .Title }}" />
+<link rel="canonical" href="{{ .CanonicalURL }}" />
+<meta property="og:title" content="{{ .Title }} | Ubuntu Manpages" />
+<meta property="og:description" content="Browse Ubuntu manpages: {{ .Title }}" />
+<meta property="og:url" content="{{ .CanonicalURL }}" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Ubuntu Manpages" />
+{{ .JSONLD }} {{ end }} {{ define "page-title" }}
 <div class="l-docs__title" id="main-content">
   <div class="p-section--shallow">
     <div class="row">
@@ -21,7 +16,8 @@
           <ol class="p-breadcrumbs__items">
             {{ range .Breadcrumbs }}
             <li class="p-breadcrumbs__item">
-              {{ if .Href }}<a class="p-breadcrumbs__link" href="{{ .Href }}">{{ .Label }}</a>{{ else }}{{ .Label }}{{ end }}
+              {{ if .Href }}<a class="p-breadcrumbs__link" href="{{ .Href }}">{{ .Label }}</a>{{
+              else }}{{ .Label }}{{ end }}
             </li>
             {{ end }}
           </ol>
@@ -30,9 +26,7 @@
     </div>
   </div>
 </div>
-{{ end }}
-
-{{ define "main" }}
+{{ end }} {{ define "main" }}
 <div class="row">
   <div class="col-12">
     {{ if .Sections }}
@@ -50,9 +44,7 @@
         {{ end }}
       </tbody>
     </table>
-    {{ end }}
-
-    {{ if .Dirs }}
+    {{ end }} {{ if .Dirs }}
     <table class="p-table" aria-label="Directories">
       <thead>
         <tr>
@@ -67,10 +59,7 @@
         {{ end }}
       </tbody>
     </table>
-    {{ end }}
-
-    {{ if .Files }}
-    <p class="u-text--muted">{{ .FileCount }} manpages</p>
+    {{ end }} {{ if .Files }}
     <table class="p-table" aria-label="Manpages">
       <thead>
         <tr>
@@ -85,6 +74,78 @@
         {{ end }}
       </tbody>
     </table>
+
+    <div class="mp-pagination-bar">
+      {{ if gt .FileCount 1 }}
+      <label class="mp-per-page">
+        <span class="u-text--muted">Per page:</span>
+        <select id="browse-per-page" class="mp-per-page__select" data-path="{{ .PagePath }}">
+          {{ range .PerPageOptions }}
+          <option value="{{ . }}" {{ if eq . $.PerPage }} selected{{ end }}>{{ . }}</option>
+          {{ end }}
+        </select>
+        <span class="u-text--muted">({{ .FileCount }} manpages)</span>
+      </label>
+      {{ else }}
+      <p class="u-text--muted u-no-margin--bottom">{{ .FileCount }} manpages</p>
+      {{ end }} {{ if gt .TotalPages 1 }}
+      <nav class="p-pagination" aria-label="Pagination">
+        <ol class="p-pagination__items">
+          <li class="p-pagination__item">
+            {{ if gt .Page 1 }}
+            <a
+              class="p-pagination__link--previous"
+              href="{{ pageURL .PagePath (sub .Page 1) .PerPage }}"
+              title="Previous page"
+              ><i class="p-icon--chevron-down">Previous page</i></a
+            >
+            {{ else }}
+            <span class="p-pagination__link--previous is-disabled" aria-disabled="true"
+              ><i class="p-icon--chevron-down">Previous page</i></span
+            >
+            {{ end }}
+          </li>
+          {{ range pageNums .Page .TotalPages }} {{ if eq . 0 }}
+          <li class="p-pagination__item p-pagination__item--truncation">&hellip;</li>
+          {{ else }}
+          <li class="p-pagination__item">
+            <a
+              class="p-pagination__link{{ if eq . $.Page }} is-active{{ end }}"
+              href="{{ pageURL $.PagePath . $.PerPage }}"
+              {{
+              if
+              eq
+              .
+              $.Page
+              }}
+              aria-current="page"
+              {{
+              end
+              }}
+              aria-label="Page {{ . }}"
+              >{{ . }}</a
+            >
+          </li>
+          {{ end }} {{ end }}
+          <li class="p-pagination__item">
+            {{ if lt .Page .TotalPages }}
+            <a
+              class="p-pagination__link--next"
+              href="{{ pageURL .PagePath (add .Page 1) .PerPage }}"
+              title="Next page"
+              ><i class="p-icon--chevron-down">Next page</i></a
+            >
+            {{ else }}
+            <span class="p-pagination__link--next is-disabled" aria-disabled="true"
+              ><i class="p-icon--chevron-down">Next page</i></span
+            >
+            {{ end }}
+          </li>
+        </ol>
+      </nav>
+      {{ end }}
+    </div>
+
     {{ end }}
   </div>
 </div>
