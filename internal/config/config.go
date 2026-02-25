@@ -1,7 +1,9 @@
 package config
 
 import (
+	"bufio"
 	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -21,8 +23,10 @@ type Config struct {
 }
 
 // Load reads configuration from environment variables, applying defaults
-// for any that are unset.
+// for any that are unset. If a .env file exists in the current working
+// directory, its values are loaded first and override the real environment.
 func Load() *Config {
+	loadDotEnv()
 	cfg := &Config{
 		Site:          envOrDefault("MANPAGES_SITE", "https://manpages.ubuntu.com"),
 		Archive:       envOrDefault("MANPAGES_ARCHIVE", "https://archive.ubuntu.com/ubuntu"),
@@ -115,6 +119,72 @@ func envOrDefault(key, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+// loadDotEnv reads a .env file from the current working directory and
+// sets each key-value pair into the process environment via os.Setenv.
+// If the file does not exist, the function returns silently.
+func loadDotEnv() {
+	f, err := os.Open(".env")
+	if err != nil {
+		return
+	}
+	defer f.Close()
+
+	vars, err := parseDotEnv(f)
+	if err != nil {
+		return
+	}
+	for k, v := range vars {
+		os.Setenv(k, v)
+	}
+}
+
+// parseDotEnv parses a .env-formatted stream into a map of key-value pairs.
+// It supports:
+//   - Blank lines and lines starting with # (comments)
+//   - KEY=VALUE (whitespace around key and value is trimmed)
+//   - Optional "export " prefix
+//   - Double-quoted and single-quoted values
+//   - Values containing '=' (only the first '=' is significant)
+//   - Empty values (KEY= or KEY)
+func parseDotEnv(r io.Reader) (map[string]string, error) {
+	vars := make(map[string]string)
+	scanner := bufio.NewScanner(r)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+
+		// Strip optional "export " prefix.
+		line = strings.TrimPrefix(line, "export ")
+
+		key, value, hasEquals := strings.Cut(line, "=")
+		key = strings.TrimSpace(key)
+		if key == "" {
+			continue
+		}
+
+		if hasEquals {
+			value = strings.TrimSpace(value)
+			value = unquote(value)
+		}
+
+		vars[key] = value
+	}
+	return vars, scanner.Err()
+}
+
+// unquote removes matching surrounding single or double quotes.
+func unquote(s string) string {
+	if len(s) >= 2 {
+		if (s[0] == '"' && s[len(s)-1] == '"') ||
+			(s[0] == '\'' && s[len(s)-1] == '\'') {
+			return s[1 : len(s)-1]
+		}
+	}
+	return s
 }
 
 func splitCSV(s string) []string {

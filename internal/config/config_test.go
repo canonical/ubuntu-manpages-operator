@@ -1,6 +1,152 @@
 package config
 
-import "testing"
+import (
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+)
+
+func TestParseDotEnvBasic(t *testing.T) {
+	input := "KEY1=value1\nKEY2=value2\n"
+	vars, err := parseDotEnv(strings.NewReader(input))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if vars["KEY1"] != "value1" {
+		t.Errorf("KEY1 = %q, want %q", vars["KEY1"], "value1")
+	}
+	if vars["KEY2"] != "value2" {
+		t.Errorf("KEY2 = %q, want %q", vars["KEY2"], "value2")
+	}
+}
+
+func TestParseDotEnvCommentsAndBlanks(t *testing.T) {
+	input := "# this is a comment\n\nKEY=val\n  # indented comment\n"
+	vars, err := parseDotEnv(strings.NewReader(input))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(vars) != 1 {
+		t.Errorf("got %d vars, want 1", len(vars))
+	}
+	if vars["KEY"] != "val" {
+		t.Errorf("KEY = %q, want %q", vars["KEY"], "val")
+	}
+}
+
+func TestParseDotEnvDoubleQuotes(t *testing.T) {
+	input := `KEY="hello world"` + "\n"
+	vars, err := parseDotEnv(strings.NewReader(input))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if vars["KEY"] != "hello world" {
+		t.Errorf("KEY = %q, want %q", vars["KEY"], "hello world")
+	}
+}
+
+func TestParseDotEnvSingleQuotes(t *testing.T) {
+	input := `KEY='hello world'` + "\n"
+	vars, err := parseDotEnv(strings.NewReader(input))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if vars["KEY"] != "hello world" {
+		t.Errorf("KEY = %q, want %q", vars["KEY"], "hello world")
+	}
+}
+
+func TestParseDotEnvEqualsInValue(t *testing.T) {
+	input := "KEY=a=b=c\n"
+	vars, err := parseDotEnv(strings.NewReader(input))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if vars["KEY"] != "a=b=c" {
+		t.Errorf("KEY = %q, want %q", vars["KEY"], "a=b=c")
+	}
+}
+
+func TestParseDotEnvExportPrefix(t *testing.T) {
+	input := "export KEY=value\n"
+	vars, err := parseDotEnv(strings.NewReader(input))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if vars["KEY"] != "value" {
+		t.Errorf("KEY = %q, want %q", vars["KEY"], "value")
+	}
+}
+
+func TestParseDotEnvWhitespaceTrimming(t *testing.T) {
+	input := "  KEY  =  value  \n"
+	vars, err := parseDotEnv(strings.NewReader(input))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if vars["KEY"] != "value" {
+		t.Errorf("KEY = %q, want %q", vars["KEY"], "value")
+	}
+}
+
+func TestParseDotEnvEmptyValue(t *testing.T) {
+	input := "KEY=\n"
+	vars, err := parseDotEnv(strings.NewReader(input))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if vars["KEY"] != "" {
+		t.Errorf("KEY = %q, want empty string", vars["KEY"])
+	}
+}
+
+func TestLoadDotEnvOverridesEnv(t *testing.T) {
+	// Create a temp directory with a .env file and chdir into it.
+	dir := t.TempDir()
+	envFile := filepath.Join(dir, ".env")
+	err := os.WriteFile(envFile, []byte("MANPAGES_ARCH=arm64\n"), 0644)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	origDir, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir(dir); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chdir(origDir) })
+
+	// Set a real env var that should be overridden by .env.
+	t.Setenv("MANPAGES_ARCH", "s390x")
+
+	cfg := Load()
+	if cfg.Arch != "arm64" {
+		t.Errorf("Arch = %q, want %q (.env should override real env)", cfg.Arch, "arm64")
+	}
+}
+
+func TestLoadWithoutDotEnv(t *testing.T) {
+	// Ensure Load works fine when no .env exists.
+	dir := t.TempDir()
+	origDir, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir(dir); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chdir(origDir) })
+
+	t.Setenv("MANPAGES_ARCH", "riscv64")
+
+	cfg := Load()
+	if cfg.Arch != "riscv64" {
+		t.Errorf("Arch = %q, want %q (should use real env when no .env)", cfg.Arch, "riscv64")
+	}
+}
 
 func TestLatestRelease(t *testing.T) {
 	cfg := &Config{

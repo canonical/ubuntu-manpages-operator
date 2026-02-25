@@ -28,3 +28,6 @@ scripts/
 
 # Go module cache
 /pkg/mod/
+
+# Config file
+.env
