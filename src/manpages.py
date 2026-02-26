@@ -120,7 +120,7 @@ class Manpages:
 
             logger.info("purging manpages for '%s'", release)
             try:
-                self.container.remove_path(WWW_DIR / "manpages" / release)
+                self.container.remove_path(WWW_DIR / "manpages" / release, recursive=True)
             except (ProtocolError, ConnectionError, PathError, APIError) as e:
                 logger.error("failed to remove manpages for '%s': %s", release, e)
                 raise
