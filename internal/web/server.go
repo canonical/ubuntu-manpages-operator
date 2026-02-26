@@ -10,6 +10,7 @@ import (
 	"html/template"
 	"io/fs"
 	"log/slog"
+	"mime"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -477,6 +478,13 @@ func staticCacheHandler(etag string, next http.Handler) http.Handler {
 		if match := r.Header.Get("If-None-Match"); match == etag {
 			w.WriteHeader(http.StatusNotModified)
 			return
+		}
+
+		// Explicitly set Content-Type from the file extension so that
+		// minimal container images without /etc/mime.types still serve
+		// CSS/JS with the correct MIME type.
+		if ct := mime.TypeByExtension(filepath.Ext(r.URL.Path)); ct != "" {
+			w.Header().Set("Content-Type", ct)
 		}
 
 		next.ServeHTTP(w, r)

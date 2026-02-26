@@ -356,6 +356,33 @@ func TestStaticAssetCacheHeaders(t *testing.T) {
 	}
 }
 
+func TestStaticAssetContentType(t *testing.T) {
+	mux := http.NewServeMux()
+	staticFS, _ := fs.Sub(webAssets, "static")
+	etag := computeStaticETag()
+	mux.Handle("/static/", staticCacheHandler(etag,
+		http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))),
+	))
+
+	tests := []struct {
+		path        string
+		contentType string
+	}{
+		{"/static/docs.css", "text/css"},
+		{"/static/app.js", "text/javascript"},
+	}
+	for _, tt := range tests {
+		req := httptest.NewRequest(http.MethodGet, tt.path, nil)
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, req)
+
+		ct := w.Result().Header.Get("Content-Type")
+		if !strings.HasPrefix(ct, tt.contentType) {
+			t.Errorf("%s: expected Content-Type starting with %q, got %q", tt.path, tt.contentType, ct)
+		}
+	}
+}
+
 func TestStaticAssetConditionalRequest(t *testing.T) {
 	mux := http.NewServeMux()
 	staticFS, _ := fs.Sub(webAssets, "static")
