@@ -1031,11 +1031,11 @@ Append .txt to any manpage URL for plain text output suitable for LLM consumptio
 
 ## API
 
-- GET /api/search?q={query}&release={release}&lang={lang}&limit={n}&offset={n}
+- GET %[1]s/api/search?q={query}&release={release}&lang={lang}&limit={n}&offset={n}
   Returns JSON with fields: total, results (array of {title, path, distro, section, match_type})
   match_type is one of: exact, prefix, contains, fuzzy (Damerau-Levenshtein)
   Results are ranked: exact > prefix > contains > fuzzy
-`)
+`, siteURL)
 }
 
 func (s *Server) handleLlmsFullTxt(w http.ResponseWriter, _ *http.Request) {
