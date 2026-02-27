@@ -40,7 +40,7 @@ class Manpages:
         }
         app_config = {
             "MANPAGES_RELEASES": releases,
-            "MANPAGES_EXTERNAL_URL": external_url,
+            "MANPAGES_SITE": external_url,
             "MANPAGES_ARCHIVE": "https://archive.ubuntu.com/ubuntu",
             "MANPAGES_PUBLIC_HTML_DIR": str(WWW_DIR),
             "MANPAGES_REPOS": "main, restricted, universe, multiverse",

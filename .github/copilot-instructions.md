@@ -83,7 +83,7 @@ The `server` and `ingest` binaries have no CLI flags — all configuration comes
 
 | Variable                   | Default                                                  | Purpose                                                |
 | -------------------------- | -------------------------------------------------------- | ------------------------------------------------------ |
-| `MANPAGES_SITE`            | `https://manpages.ubuntu.com`                            | Public-facing site URL (used in sitemaps, links)       |
+| `MANPAGES_SITE`            | `https://manpages.ubuntu.com`                            | Public-facing site URL (used in sitemaps, links). Path component (if any) is used as a base path prefix for all generated internal URLs. |
 | `MANPAGES_ARCHIVE`         | `https://archive.ubuntu.com/ubuntu`                      | Ubuntu package archive URL                             |
 | `MANPAGES_PUBLIC_HTML_DIR` | `/app/www`                                               | Root output directory for HTML and gzip files          |
 | `MANPAGES_RELEASES`        | `trusty, xenial, bionic, jammy, noble, plucky, questing` | Comma-separated release codenames                      |
