@@ -4,7 +4,7 @@
     <div class="col">
       <div class="p-navigation__banner">
         <div class="p-navigation__tagged-logo">
-          <a class="p-navigation__link" href="/">
+          <a class="p-navigation__link" href="{{ urlFor "/" }}">
             <div class="p-navigation__logo-tag">
               <img
                 class="p-navigation__logo-icon"
@@ -26,17 +26,17 @@
         <nav class="p-navigation__nav" aria-label="Main">
           <ul class="p-navigation__items">
             <li class="p-navigation__item{{ if eq .ActiveNav "search" }} is-selected{{ end }}">
-              <a class="p-navigation__link" href="/search">Search</a>
+              <a class="p-navigation__link" href="{{ urlFor "/search" }}">Search</a>
             </li>
             <li class="p-navigation__item{{ if eq .ActiveNav "browse" }} is-selected{{ end }}">
-              <a class="p-navigation__link" href="/manpages">Browse</a>
+              <a class="p-navigation__link" href="{{ urlFor "/manpages" }}">Browse</a>
             </li>
             <li class="p-navigation__item--dropdown-toggle" id="releases-dropdown">
               <a class="p-navigation__link" aria-controls="releases-menu" href="#">Releases</a>
               <ul class="p-navigation__dropdown--right" id="releases-menu" aria-hidden="true">
                 {{ range reverseReleases .Releases }}
                 <li class="p-navigation__dropdown-item">
-                  <a class="p-navigation__link" href="/manpages/{{ .Name }}"
+                  <a class="p-navigation__link" href="{{ urlFor "/manpages/" }}{{ .Name }}"
                     >{{ .Label }}
                     <span style="opacity: 0.7">({{ .Name }})</span></a
                   >

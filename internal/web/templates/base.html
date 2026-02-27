@@ -15,7 +15,7 @@
           <div class="l-docs__main">
             <div class="row">
               <div class="mp-search-bar">
-                <form class="p-search-box u-no-margin--bottom" method="get" action="/search">
+                <form class="p-search-box u-no-margin--bottom" method="get" action="{{ urlFor "/search" }}">
                   {{ template "search-inputs" . }}
                 </form>
                 {{ block "search-extras" . }}{{ end }}
@@ -42,14 +42,14 @@
               </button>
             </div>
             <ul>
-              <li><a href="/"{{ if eq .ActiveNav "home" }} class="is-active"{{ end }}>Home</a></li>
-              <li><a href="/search"{{ if eq .ActiveNav "search" }} class="is-active"{{ end }}>Search</a></li>
-              <li><a href="/manpages"{{ if eq .ActiveNav "browse" }} class="is-active"{{ end }}>Browse</a></li>
+              <li><a href="{{ urlFor "/" }}"{{ if eq .ActiveNav "home" }} class="is-active"{{ end }}>Home</a></li>
+              <li><a href="{{ urlFor "/search" }}"{{ if eq .ActiveNav "search" }} class="is-active"{{ end }}>Search</a></li>
+              <li><a href="{{ urlFor "/manpages" }}"{{ if eq .ActiveNav "browse" }} class="is-active"{{ end }}>Browse</a></li>
             </ul>
             <ul>
               <li><strong>Releases</strong></li>
               {{ range reverseReleases .Releases }}
-              <li><a href="/manpages/{{ .Name }}">{{ .Label }}</a></li>
+              <li><a href="{{ urlFor "/manpages/" }}{{ .Name }}">{{ .Label }}</a></li>
               {{ end }}
             </ul>
             {{ block "sidebar-extra" . }}{{ end }}
@@ -70,7 +70,7 @@
       </div>
     </div>
 
-    <script src="/static/app.js"></script>
+    <script src="{{ urlFor "/static/app.js" }}"></script>
     {{ block "scripts" . }}{{ end }}
   </body>
 </html>

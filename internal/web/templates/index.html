@@ -26,8 +26,8 @@
         regularly.
       </p>
       <div class="p-cta-block">
-        <a class="p-button--positive" href="/search">Search manpages</a>
-        <a class="p-button" href="/manpages">Browse all releases</a>
+        <a class="p-button--positive" href="{{ urlFor "/search" }}">Search manpages</a>
+        <a class="p-button" href="{{ urlFor "/manpages" }}">Browse all releases</a>
       </div>
     </div>
   </div>
@@ -41,14 +41,14 @@
       <h2>Find a manpage</h2>
     </div>
     <div class="col">
-      <form class="p-search-box" style="margin-top: 1rem" method="get" action="/search">
+      <form class="p-search-box" style="margin-top: 1rem" method="get" action="{{ urlFor "/search" }}">
         {{ template "search-inputs" . }}
       </form>
       <p class="u-text--muted">
         Try
-        <a href="/search?q=ls">ls</a>, <a href="/search?q=grep">grep</a>,
-        <a href="/search?q=systemd">systemd</a>, or
-        <a href="/search?q=apt">apt</a>
+        <a href="{{ urlFor "/search" }}?q=ls">ls</a>, <a href="{{ urlFor "/search" }}?q=grep">grep</a>,
+        <a href="{{ urlFor "/search" }}?q=systemd">systemd</a>, or
+        <a href="{{ urlFor "/search" }}?q=apt">apt</a>
       </p>
     </div>
   </div>
@@ -67,7 +67,7 @@
           <ul class="p-list--divided">
             {{ range $i, $r := .Releases }}{{ if even $i }}
             <li class="p-list__item">
-              <a href="/manpages/{{ $r.Name }}">{{ $r.Label }} ({{ $r.Name }})</a>
+              <a href="{{ urlFor "/manpages/" }}{{ $r.Name }}">{{ $r.Label }} ({{ $r.Name }})</a>
             </li>
             {{ end }}{{ end }}
           </ul>
@@ -76,7 +76,7 @@
           <ul class="p-list--divided">
             {{ range $i, $r := .Releases }}{{ if not (even $i) }}
             <li class="p-list__item">
-              <a href="/manpages/{{ $r.Name }}">{{ $r.Label }} ({{ $r.Name }})</a>
+              <a href="{{ urlFor "/manpages/" }}{{ $r.Name }}">{{ $r.Label }} ({{ $r.Name }})</a>
             </li>
             {{ end }}{{ end }}
           </ul>

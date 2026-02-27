@@ -16,7 +16,7 @@
 <ul>
   <li><strong>Other versions</strong></li>
   {{ range .Releases }}
-  <li><a href="/manpages/{{ .Name }}/{{ $.PathSuffix }}">{{ .Label }}</a></li>
+  <li><a href="{{ urlFor "/manpages/" }}{{ .Name }}/{{ $.PathSuffix }}">{{ .Label }}</a></li>
   {{ end }}
 </ul>
 {{ end }}

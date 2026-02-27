@@ -61,7 +61,7 @@
             role="tab"
             data-release="{{ $rel.Name }}"
             aria-selected="{{ if eq $rel.Name $active }}true{{ else }}false{{ end }}"
-            href="/search?q={{ $query }}&release={{ $rel.Name }}"
+            href="{{ urlFor "/search" }}?q={{ $query }}&release={{ $rel.Name }}"
           >
             {{ $rel.Label }}
           </a>
@@ -85,21 +85,21 @@
       <p class="p-heading--4">Search across every manpage in Ubuntu</p>
       <p>Try something like:</p>
       <div class="mp-search-suggestions">
-        <a class="p-chip" href="/search?q=systemctl"
+        <a class="p-chip" href="{{ urlFor "/search" }}?q=systemctl"
           ><span class="p-chip__value">systemctl</span></a
         >
-        <a class="p-chip" href="/search?q=grep"><span class="p-chip__value">grep</span></a>
-        <a class="p-chip" href="/search?q=nginx"><span class="p-chip__value">nginx</span></a>
-        <a class="p-chip" href="/search?q=ssh_config"
+        <a class="p-chip" href="{{ urlFor "/search" }}?q=grep"><span class="p-chip__value">grep</span></a>
+        <a class="p-chip" href="{{ urlFor "/search" }}?q=nginx"><span class="p-chip__value">nginx</span></a>
+        <a class="p-chip" href="{{ urlFor "/search" }}?q=ssh_config"
           ><span class="p-chip__value">ssh_config</span></a
         >
-        <a class="p-chip" href="/search?q=crontab"><span class="p-chip__value">crontab</span></a>
-        <a class="p-chip" href="/search?q=iptables"><span class="p-chip__value">iptables</span></a>
+        <a class="p-chip" href="{{ urlFor "/search" }}?q=crontab"><span class="p-chip__value">crontab</span></a>
+        <a class="p-chip" href="{{ urlFor "/search" }}?q=iptables"><span class="p-chip__value">iptables</span></a>
       </div>
     </div>
     {{ end }}
   </div>
 </div>
 {{ end }} {{ define "scripts" }}
-<script src="/static/search.js"></script>
+<script src="{{ urlFor "/static/search.js" }}"></script>
 {{ end }}

@@ -11,6 +11,7 @@
   const tabs = container.querySelectorAll(".p-tabs__link")
   if (!tabs.length) return
 
+  const basePath = document.querySelector('meta[name="base-path"]')?.content || ""
   const defaultLimit = 20
   const limitSelect = document.getElementById("search-limit")
   const getLimit = () =>
@@ -120,7 +121,7 @@
 
     showSpinner()
 
-    const url = `/api/search?q=${encodeURIComponent(query)}&release=${encodeURIComponent(release)}&limit=${getLimit()}`
+    const url = `${basePath}/api/search?q=${encodeURIComponent(query)}&release=${encodeURIComponent(release)}&limit=${getLimit()}`
 
     fetch(url)
       .then((resp) => {

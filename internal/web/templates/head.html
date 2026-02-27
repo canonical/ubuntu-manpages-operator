@@ -10,7 +10,8 @@
     rel="stylesheet"
     href="https://assets.ubuntu.com/v1/vanilla_framework_version_4_44_0_min.css"
   />
-  <link rel="stylesheet" href="/static/docs.css" />
+  <meta name="base-path" content="{{ urlFor "" }}" />
+  <link rel="stylesheet" href="{{ urlFor "/static/docs.css" }}" />
   <link
     rel="icon"
     type="image/png"
