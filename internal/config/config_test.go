@@ -275,6 +275,29 @@ func TestForceDefault(t *testing.T) {
 	}
 }
 
+func TestBasePath(t *testing.T) {
+	tests := []struct {
+		site string
+		want string
+	}{
+		{"https://manpages.ubuntu.com", ""},
+		{"https://manpages.ubuntu.com/", ""},
+		{"https://foo.bar/docs", "/docs"},
+		{"https://foo.bar/docs/", "/docs"},
+		{"https://foo.bar/a/b/c", "/a/b/c"},
+		{"http://localhost:8080", ""},
+		{"http://localhost:8080/prefix", "/prefix"},
+		{"not-a-url", "not-a-url"},
+	}
+	for _, tt := range tests {
+		cfg := &Config{Site: tt.site}
+		got := cfg.BasePath()
+		if got != tt.want {
+			t.Errorf("BasePath(%q) = %q, want %q", tt.site, got, tt.want)
+		}
+	}
+}
+
 func TestForceFromEnv(t *testing.T) {
 	dir := t.TempDir()
 	origDir, _ := os.Getwd()

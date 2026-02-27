@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"io"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
@@ -72,6 +73,17 @@ func (c *Config) IndexPath() string {
 
 func (c *Config) SiteURL() string {
 	return strings.TrimRight(c.Site, "/")
+}
+
+// BasePath returns the path component of the Site URL, suitable for prefixing
+// internal navigation links. Returns "" when the site is at the root.
+// For example, "https://foo.bar/docs" → "/docs".
+func (c *Config) BasePath() string {
+	u, err := url.Parse(c.Site)
+	if err != nil {
+		return ""
+	}
+	return strings.TrimRight(u.Path, "/")
 }
 
 func (c *Config) ReleaseKeys() []string {
