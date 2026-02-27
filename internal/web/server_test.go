@@ -763,7 +763,7 @@ func TestGroupSearchResults(t *testing.T) {
 		{Title: "lsblk - list block devices", Path: "/manpages/noble/man8/lsblk.8.html", Distro: "noble", Section: 8},
 	}
 
-	groups, _ := groupSearchResults(results, releases)
+	groups, _ := groupSearchResults(results, releases, "")
 
 	if len(groups) != 2 {
 		t.Fatalf("expected 2 groups, got %d", len(groups))
@@ -921,7 +921,7 @@ func TestGroupSearchResultsUnknownDistro(t *testing.T) {
 		{Title: "foo", Path: "/manpages/unknown/man1/foo.1.html", Distro: "unknown", Section: 1},
 	}
 
-	groups, _ := groupSearchResults(results, nil)
+	groups, _ := groupSearchResults(results, nil, "")
 
 	if len(groups) != 1 {
 		t.Fatalf("expected 1 group, got %d", len(groups))
@@ -1029,7 +1029,7 @@ func TestSplitByMatchType(t *testing.T) {
 		{Title: "sl", MatchType: search.MatchFuzzy, Distro: "noble"},
 	}
 
-	groups, hasFuzzy := groupSearchResults(results, nil)
+	groups, hasFuzzy := groupSearchResults(results, nil, "")
 
 	if !hasFuzzy {
 		t.Error("expected hasFuzzy to be true")

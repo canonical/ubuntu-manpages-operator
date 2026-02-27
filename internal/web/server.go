@@ -35,6 +35,7 @@ const (
 
 type Server struct {
 	cfg         *config.Config
+	basePath    string
 	logger      *slog.Logger
 	index       *template.Template
 	searchPage  *template.Template
@@ -112,11 +113,13 @@ func readVCSRevision() string {
 }
 
 func NewServer(cfg *config.Config, logger *slog.Logger) *Server {
+	basePath := cfg.BasePath()
 	funcMap := template.FuncMap{
 		"commitHash": func() string { return vcsRevision },
 		"sub":        func(a, b int) int { return a - b },
 		"add":        func(a, b int) int { return a + b },
 		"even":       func(i int) bool { return i%2 == 0 },
+		"urlFor":     func(path string) string { return basePath + path },
 		"reverseReleases": func(rs []indexRelease) []indexRelease {
 			out := make([]indexRelease, len(rs))
 			for i, r := range rs {
@@ -178,6 +181,7 @@ func NewServer(cfg *config.Config, logger *slog.Logger) *Server {
 	searcher := search.NewFSSearcher(cfg.PublicHTMLDir, cfg.ReleaseKeys())
 	return &Server{
 		cfg:         cfg,
+		basePath:    basePath,
 		logger:      logger,
 		index:       index,
 		searchPage:  searchPage,
@@ -265,7 +269,7 @@ func (s *Server) handleSearchPage(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				view.SearchError = true
 			} else {
-				view.ResultGroups, view.HasFuzzy = groupSearchResults(results.Results, idx.Releases)
+				view.ResultGroups, view.HasFuzzy = groupSearchResults(results.Results, idx.Releases, s.basePath)
 				for _, g := range view.ResultGroups {
 					view.Total += uint64(g.Count)
 				}
@@ -279,7 +283,7 @@ func (s *Server) handleSearchPage(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func groupSearchResults(results []search.Result, releases []indexRelease) ([]searchGroup, bool) {
+func groupSearchResults(results []search.Result, releases []indexRelease, basePath string) ([]searchGroup, bool) {
 	labelMap := make(map[string]string, len(releases))
 	for _, r := range releases {
 		labelMap[r.Name] = r.Label
@@ -304,7 +308,7 @@ func groupSearchResults(results []search.Result, releases []indexRelease) ([]sea
 		srv := searchResultView{
 			Name:      name,
 			Desc:      desc,
-			Path:      r.Path,
+			Path:      basePath + r.Path,
 			Section:   r.Section,
 			MatchType: r.MatchType,
 		}
@@ -386,6 +390,11 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if s.basePath != "" {
+		for i := range results.Results {
+			results.Results[i].Path = s.basePath + results.Results[i].Path
+		}
+	}
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(results)
 }
@@ -622,7 +631,7 @@ func (s *Server) handleManpages(w http.ResponseWriter, r *http.Request) {
 		}
 		if target != "" {
 			parts[2] = target
-			dest := strings.Join(parts, "/")
+			dest := s.basePath + strings.Join(parts, "/")
 			if strings.HasSuffix(r.URL.Path, "/") && !strings.HasSuffix(dest, "/") {
 				dest += "/"
 			}
@@ -645,7 +654,7 @@ func (s *Server) handleManpages(w http.ResponseWriter, r *http.Request) {
 		// Cross-reference links like SSL_connect(3) produce .3.html but
 		// the actual file may be .3ssl.html. Try finding a suffixed variant.
 		if redirect := findSuffixedVariant(clean, fsPath); redirect != "" {
-			http.Redirect(w, r, redirect, http.StatusMovedPermanently)
+			http.Redirect(w, r, s.basePath+redirect, http.StatusMovedPermanently)
 			return
 		}
 		s.renderNotFound(w, r)
@@ -660,7 +669,7 @@ func (s *Server) handleManpages(w http.ResponseWriter, r *http.Request) {
 
 	// Redirect to trailing slash for directories.
 	if !strings.HasSuffix(r.URL.Path, "/") {
-		http.Redirect(w, r, r.URL.Path+"/", http.StatusMovedPermanently)
+		http.Redirect(w, r, s.basePath+r.URL.Path+"/", http.StatusMovedPermanently)
 		return
 	}
 
@@ -676,7 +685,7 @@ func (s *Server) handleManpages(w http.ResponseWriter, r *http.Request) {
 		if strings.HasPrefix(name, ".") {
 			continue
 		}
-		href := filepath.Join(r.URL.Path, name)
+		href := s.basePath + filepath.Join(r.URL.Path, name)
 		if e.IsDir() {
 			entry := browseEntry{Name: name, Href: template.URL(href + "/")}
 			if isManSection(name) {
@@ -695,9 +704,9 @@ func (s *Server) handleManpages(w http.ResponseWriter, r *http.Request) {
 
 	// Build breadcrumbs from path segments.
 	segments := strings.Split(strings.Trim(clean, "/"), "/")
-	crumbs := []breadcrumb{{Label: "Manpages", Href: "/manpages/"}}
+	crumbs := []breadcrumb{{Label: "Manpages", Href: s.basePath + "/manpages/"}}
 	for i := 1; i < len(segments); i++ {
-		href := "/" + strings.Join(segments[:i+1], "/") + "/"
+		href := s.basePath + "/" + strings.Join(segments[:i+1], "/") + "/"
 		label := segments[i]
 		if i == 1 {
 			if ver, ok := s.cfg.ReleaseVersions[label]; ok {
@@ -756,7 +765,7 @@ func (s *Server) handleManpages(w http.ResponseWriter, r *http.Request) {
 		TotalPages:     totalPages,
 		PerPage:        perPage,
 		PerPageOptions: browsePerPageOptions,
-		PagePath:       r.URL.Path,
+		PagePath:       s.basePath + r.URL.Path,
 		SiteURL:        siteURL,
 		CanonicalURL:   siteURL + clean,
 		JSONLD:         buildBrowseJSONLD(siteURL, crumbs),
@@ -894,7 +903,7 @@ func (s *Server) serveManpage(w http.ResponseWriter, r *http.Request, fsPath str
 	if len(segments) >= 4 {
 		gzPath := strings.Replace(clean, "/manpages/", "/manpages.gz/", 1)
 		gzPath = strings.TrimSuffix(gzPath, ".html") + ".gz"
-		view.GzipHref = gzPath
+		view.GzipHref = s.basePath + gzPath
 		view.GzipName = filepath.Base(gzPath)
 	}
 	view.JSONLD = buildManpageJSONLD(view.SiteURL, view.CanonicalURL, view.Title, view.Description, view.Breadcrumbs)
@@ -912,13 +921,13 @@ func (s *Server) buildManpageBreadcrumbs(segments []string) []breadcrumb {
 	var crumbs []breadcrumb
 	// segments[1] is the release name
 	distro := segments[1]
-	crumbs = append(crumbs, breadcrumb{Label: distro, Href: "/manpages/" + distro})
+	crumbs = append(crumbs, breadcrumb{Label: distro, Href: s.basePath + "/manpages/" + distro})
 	// segments[2] is e.g. "man1"
 	if len(segments) >= 3 {
 		section := strings.TrimPrefix(segments[2], "man")
 		crumbs = append(crumbs, breadcrumb{
 			Label: "man(" + section + ")",
-			Href:  "/manpages/" + distro + "/" + segments[2],
+			Href:  s.basePath + "/manpages/" + distro + "/" + segments[2],
 		})
 	}
 	return crumbs
@@ -970,12 +979,12 @@ func (s *Server) handleRobotsTxt(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	_, _ = fmt.Fprintf(w, `User-agent: *
 Allow: /
-Disallow: /api/
-Disallow: /healthz
-Disallow: /manpages.gz/
+Disallow: %[1]s/api/
+Disallow: %[1]s/healthz
+Disallow: %[1]s/manpages.gz/
 
-Sitemap: %s/sitemaps/sitemap-index.xml
-`, siteURL)
+Sitemap: %[2]s/sitemaps/sitemap-index.xml
+`, s.basePath, siteURL)
 }
 
 func (s *Server) handleLlmsTxt(w http.ResponseWriter, _ *http.Request) {
