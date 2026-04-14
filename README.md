@@ -32,6 +32,7 @@ All three binaries read configuration from environment variables, optionally loa
 | `MANPAGES_REPOS`           | `main, restricted, universe, multiverse`                 | Ubuntu repos to scan                                   |
 | `MANPAGES_ARCH`            | `amd64`                                                  | Architecture to fetch packages for                     |
 | `MANPAGES_ADDR`            | `:8080`                                                  | HTTP bind address (server only)                        |
+| `MANPAGES_ADMIN_ADDR`      | `127.0.0.1:9090`                                         | Admin listener address for internal endpoints; must be loopback-only (server only) |
 | `MANPAGES_LOG_LEVEL`       | `info`                                                   | Log level (debug, info, warn, error)                   |
 | `MANPAGES_FORCE`           | `false`                                                  | Force reprocessing of all packages (ignore SHA1 cache) |
 

@@ -22,6 +22,7 @@ type Config struct {
 	Repos           []string
 	Arch            string
 	Addr            string
+	AdminAddr       string
 	LogLevel        string
 	Force           bool
 }
@@ -39,6 +40,7 @@ func Load() *Config {
 		Repos:         splitCSV(envOrDefault("MANPAGES_REPOS", "main, restricted, universe, multiverse")),
 		Arch:          envOrDefault("MANPAGES_ARCH", "amd64"),
 		Addr:          envOrDefault("MANPAGES_ADDR", ":8080"),
+		AdminAddr:     envOrDefault("MANPAGES_ADMIN_ADDR", "127.0.0.1:9090"),
 		LogLevel:      envOrDefault("MANPAGES_LOG_LEVEL", "info"),
 		Force:         envBool("MANPAGES_FORCE"),
 	}

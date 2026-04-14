@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/canonical/ubuntu-manpages-operator/internal/config"
 	"github.com/canonical/ubuntu-manpages-operator/internal/search"
@@ -1111,5 +1112,53 @@ func TestHandleSearchPageNoMatchesShowsTabs(t *testing.T) {
 	// Tabs should still be rendered so the user can switch releases.
 	if !strings.Contains(text, "p-tabs__link") {
 		t.Error("expected release tabs even with no results")
+	}
+}
+
+func TestHandleReindex(t *testing.T) {
+	srv, cfg := testServer(t)
+
+	// Add a new file after the server (and its index) was created, simulating
+	// a file written by ingest after the server started.
+	manDir := filepath.Join(cfg.PublicHTMLDir, "manpages", "noble", "man1")
+	fragment := `<!--META:{"title":"htop","description":"interactive process viewer"}-->` + "\n" + `<p>content</p>`
+	if err := os.WriteFile(filepath.Join(manDir, "htop.1.html"), []byte(fragment), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	// The index is stale — htop should not be found yet.
+	ctx := t.Context()
+	results, err := srv.search.Search(ctx, "htop", "noble", "", 10, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(results.Results) != 0 {
+		t.Fatalf("expected 0 results before reindex, got %d", len(results.Results))
+	}
+
+	// POST /_/reindex should return 202 Accepted.
+	req := httptest.NewRequest(http.MethodPost, "/_/reindex", nil)
+	w := httptest.NewRecorder()
+	srv.handleReindex(w, req)
+
+	if w.Result().StatusCode != http.StatusAccepted {
+		t.Fatalf("expected 202, got %d", w.Result().StatusCode)
+	}
+
+	// Rebuild runs in a goroutine; poll briefly until the index is updated.
+	deadline := time.Now().Add(time.Second)
+	for time.Now().Before(deadline) {
+		results, err = srv.search.Search(ctx, "htop", "noble", "", 10, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(results.Results) > 0 {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	if len(results.Results) == 0 {
+		t.Error("expected htop to appear in search results after reindex")
 	}
 }

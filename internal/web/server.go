@@ -11,6 +11,7 @@ import (
 	"io/fs"
 	"log/slog"
 	"mime"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -192,7 +193,7 @@ func NewServer(cfg *config.Config, logger *slog.Logger) *Server {
 	}
 }
 
-func (s *Server) ListenAndServe(addr string) error {
+func (s *Server) ListenAndServe(addr, adminAddr string) error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", s.handleHealth)
 	mux.HandleFunc("/robots.txt", s.handleRobotsTxt)
@@ -214,8 +215,7 @@ func (s *Server) ListenAndServe(addr string) error {
 	sitemapDir := filepath.Join(s.cfg.PublicHTMLDir, "sitemaps")
 	mux.Handle("/sitemaps/", http.StripPrefix("/sitemaps/", http.FileServer(http.Dir(sitemapDir))))
 
-	srv := &http.Server{
-		Addr:              addr,
+	pubSrv := &http.Server{
 		Handler:           s.logRequests(securityHeaders(gzipHandler(mux))),
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       30 * time.Second,
@@ -224,8 +224,35 @@ func (s *Server) ListenAndServe(addr string) error {
 		MaxHeaderBytes:    1 << 20, // 1 MB
 	}
 
-	s.logger.Info("listening", "addr", addr)
-	return srv.ListenAndServe()
+	adminMux := http.NewServeMux()
+	adminMux.HandleFunc("POST /_/reindex", s.handleReindex)
+	adminSrv := &http.Server{
+		Handler:           adminMux,
+		ReadHeaderTimeout: 10 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       60 * time.Second,
+	}
+
+	pubLn, err := net.Listen("tcp", addr)
+	if err != nil {
+		return err
+	}
+	adminLn, err := net.Listen("tcp", adminAddr)
+	if err != nil {
+		return err
+	}
+
+	s.logger.Info("listening", "addr", addr, "admin_addr", adminAddr)
+
+	errc := make(chan error, 2)
+	go func() { errc <- pubSrv.Serve(pubLn) }()
+	go func() { errc <- adminSrv.Serve(adminLn) }()
+	return <-errc
+}
+
+func (s *Server) handleReindex(w http.ResponseWriter, r *http.Request) {
+	go s.search.Rebuild()
+	w.WriteHeader(http.StatusAccepted)
 }
 
 func (s *Server) handleSearchPage(w http.ResponseWriter, r *http.Request) {
