@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/canonical/ubuntu-manpages-operator/internal/config"
 	"github.com/canonical/ubuntu-manpages-operator/internal/fetcher"
@@ -76,5 +78,21 @@ func ingest(logger *slog.Logger, cfg *config.Config) error {
 	}
 
 	ctx := context.Background()
-	return runner.Run(ctx, cfg.ReleaseKeys())
+	if err := runner.Run(ctx, cfg.ReleaseKeys()); err != nil {
+		return err
+	}
+	notifyReindex(logger, cfg.AdminAddr)
+	return nil
+}
+
+func notifyReindex(logger *slog.Logger, adminAddr string) {
+	url := "http://" + adminAddr + "/_/reindex"
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Post(url, "", nil)
+	if err != nil {
+		logger.Warn("failed to notify server of reindex", "error", err)
+		return
+	}
+	_ = resp.Body.Close()
+	logger.Info("server notified of reindex", "status", resp.StatusCode)
 }
