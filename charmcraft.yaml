@@ -61,7 +61,7 @@ resources:
     type: oci-image
     description: OCI image for manpages service
     # Included for simplicity in integration tests
-    upstream-source: ghcr.io/canonical/ubuntu-manpages-operator:0.1.0
+    upstream-source: ghcr.io/canonical/ubuntu-manpages-operator:0.2.0
 
 charm-libs:
   - lib: traefik_k8s.ingress
