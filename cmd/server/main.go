@@ -29,6 +29,7 @@ func main() {
 	cfg.ReleaseVersions = versions
 
 	server := web.NewServer(cfg, logger)
+	go server.RegenerateSitemaps()
 	if err := server.ListenAndServe(cfg.Addr, cfg.AdminAddr); err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)

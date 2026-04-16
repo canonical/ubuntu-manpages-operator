@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/canonical/ubuntu-manpages-operator/internal/config"
@@ -14,7 +13,6 @@ import (
 	"github.com/canonical/ubuntu-manpages-operator/internal/launchpad"
 	"github.com/canonical/ubuntu-manpages-operator/internal/logging"
 	"github.com/canonical/ubuntu-manpages-operator/internal/pipeline"
-	"github.com/canonical/ubuntu-manpages-operator/internal/sitemap"
 	"github.com/canonical/ubuntu-manpages-operator/internal/storage"
 )
 
@@ -60,21 +58,14 @@ func ingest(logger *slog.Logger, cfg *config.Config) error {
 	extractor := pipeline.NewDebExtractor(workDir)
 	storage := storage.NewFSStorage(cfg.PublicHTMLDir)
 
-	sitemapGen := &sitemap.SitemapGenerator{
-		Root:    cfg.PublicHTMLDir,
-		SiteURL: strings.TrimRight(cfg.Site, "/"),
-		Logger:  logger,
-	}
-
 	runner := &pipeline.Runner{
-		Fetcher:          pkgFetcher,
-		Extractor:        extractor,
-		Converter:        converter,
-		Storage:          storage,
-		SitemapGenerator: sitemapGen,
-		Logger:           logger,
-		FailuresDir:      cfg.PublicHTMLDir,
-		ForceProcess:     cfg.Force,
+		Fetcher:      pkgFetcher,
+		Extractor:    extractor,
+		Converter:    converter,
+		Storage:      storage,
+		Logger:       logger,
+		FailuresDir:  cfg.PublicHTMLDir,
+		ForceProcess: cfg.Force,
 	}
 
 	ctx := context.Background()
@@ -82,17 +73,26 @@ func ingest(logger *slog.Logger, cfg *config.Config) error {
 		return err
 	}
 	notifyReindex(logger, cfg.AdminAddr)
+	notifyRegenerateSitemaps(logger, cfg.AdminAddr)
 	return nil
 }
 
 func notifyReindex(logger *slog.Logger, adminAddr string) {
-	url := "http://" + adminAddr + "/_/reindex"
+	notifyAdmin(logger, adminAddr, "/_/reindex", "reindex")
+}
+
+func notifyRegenerateSitemaps(logger *slog.Logger, adminAddr string) {
+	notifyAdmin(logger, adminAddr, "/_/regenerate-sitemaps", "sitemap regeneration")
+}
+
+func notifyAdmin(logger *slog.Logger, adminAddr, path, action string) {
+	url := "http://" + adminAddr + path
 	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Post(url, "", nil)
 	if err != nil {
-		logger.Warn("failed to notify server of reindex", "error", err)
+		logger.Warn("failed to notify server of "+action, "error", err)
 		return
 	}
 	_ = resp.Body.Close()
-	logger.Info("server notified of reindex", "status", resp.StatusCode)
+	logger.Info("server notified of "+action, "status", resp.StatusCode)
 }

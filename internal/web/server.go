@@ -21,8 +21,11 @@ import (
 	"strings"
 	"time"
 
+	"context"
+
 	"github.com/canonical/ubuntu-manpages-operator/internal/config"
 	"github.com/canonical/ubuntu-manpages-operator/internal/search"
+	"github.com/canonical/ubuntu-manpages-operator/internal/sitemap"
 	"github.com/canonical/ubuntu-manpages-operator/internal/transform"
 )
 
@@ -44,6 +47,7 @@ type Server struct {
 	manpagePage *template.Template
 	notFound    *template.Template
 	search      search.Searcher
+	sitemapGen  *sitemap.SitemapGenerator
 }
 
 type manpageView struct {
@@ -180,6 +184,11 @@ func NewServer(cfg *config.Config, logger *slog.Logger) *Server {
 	manpagePage := parse(append(partials, "templates/base.html", "templates/manpage.html")...)
 	notFound := parse(append(partials, "templates/base.html", "templates/404.html")...)
 	searcher := search.NewFSSearcher(cfg.PublicHTMLDir, cfg.ReleaseKeys())
+	sitemapGen := &sitemap.SitemapGenerator{
+		Root:    cfg.PublicHTMLDir,
+		SiteURL: cfg.SiteURL(),
+		Logger:  logger,
+	}
 	return &Server{
 		cfg:         cfg,
 		basePath:    basePath,
@@ -190,6 +199,7 @@ func NewServer(cfg *config.Config, logger *slog.Logger) *Server {
 		manpagePage: manpagePage,
 		notFound:    notFound,
 		search:      searcher,
+		sitemapGen:  sitemapGen,
 	}
 }
 
@@ -226,6 +236,7 @@ func (s *Server) ListenAndServe(addr, adminAddr string) error {
 
 	adminMux := http.NewServeMux()
 	adminMux.HandleFunc("POST /_/reindex", s.handleReindex)
+	adminMux.HandleFunc("POST /_/regenerate-sitemaps", s.handleRegenerateSitemaps)
 	adminSrv := &http.Server{
 		Handler:           adminMux,
 		ReadHeaderTimeout: 10 * time.Second,
@@ -253,6 +264,20 @@ func (s *Server) ListenAndServe(addr, adminAddr string) error {
 func (s *Server) handleReindex(w http.ResponseWriter, r *http.Request) {
 	go s.search.Rebuild()
 	w.WriteHeader(http.StatusAccepted)
+}
+
+func (s *Server) handleRegenerateSitemaps(w http.ResponseWriter, r *http.Request) {
+	go s.RegenerateSitemaps()
+	w.WriteHeader(http.StatusAccepted)
+}
+
+// RegenerateSitemaps rebuilds all sitemap XML files using the current site URL.
+func (s *Server) RegenerateSitemaps() {
+	if err := s.sitemapGen.Generate(context.Background(), s.cfg.ReleaseKeys()); err != nil {
+		s.logger.Error("sitemap generation failed", "error", err)
+		return
+	}
+	s.logger.Info("sitemaps regenerated")
 }
 
 func (s *Server) handleSearchPage(w http.ResponseWriter, r *http.Request) {

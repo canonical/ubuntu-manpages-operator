@@ -1162,3 +1162,44 @@ func TestHandleReindex(t *testing.T) {
 		t.Error("expected htop to appear in search results after reindex")
 	}
 }
+
+func TestHandleRegenerateSitemaps(t *testing.T) {
+	srv, cfg := testServer(t)
+
+	sitemapDir := filepath.Join(cfg.PublicHTMLDir, "sitemaps")
+
+	// No sitemaps should exist yet.
+	if _, err := os.Stat(sitemapDir); !os.IsNotExist(err) {
+		t.Fatal("expected sitemaps dir to not exist before regeneration")
+	}
+
+	// POST /_/regenerate-sitemaps should return 202 Accepted.
+	req := httptest.NewRequest(http.MethodPost, "/_/regenerate-sitemaps", nil)
+	w := httptest.NewRecorder()
+	srv.handleRegenerateSitemaps(w, req)
+
+	if w.Result().StatusCode != http.StatusAccepted {
+		t.Fatalf("expected 202, got %d", w.Result().StatusCode)
+	}
+
+	// Generation runs in a goroutine; poll briefly until the sitemap appears.
+	indexPath := filepath.Join(sitemapDir, "sitemap-index.xml")
+	deadline := time.Now().Add(time.Second)
+	for time.Now().Before(deadline) {
+		if _, err := os.Stat(indexPath); err == nil {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	data, err := os.ReadFile(indexPath)
+	if err != nil {
+		t.Fatalf("sitemap index not generated: %v", err)
+	}
+
+	// Verify URLs use the configured site URL, not a raw IP.
+	content := string(data)
+	if !strings.Contains(content, "https://manpages.ubuntu.com/sitemaps/") {
+		t.Error("sitemap index should contain the configured site URL")
+	}
+}
