@@ -8,6 +8,9 @@ import (
 	"os"
 	"time"
 
+	"errors"
+	"path/filepath"
+
 	"github.com/canonical/ubuntu-manpages-operator/internal/config"
 	"github.com/canonical/ubuntu-manpages-operator/internal/fetcher"
 	"github.com/canonical/ubuntu-manpages-operator/internal/launchpad"
@@ -66,10 +69,14 @@ func ingest(logger *slog.Logger, cfg *config.Config) error {
 		Logger:       logger,
 		FailuresDir:  cfg.PublicHTMLDir,
 		ForceProcess: cfg.Force,
+		StoragePath:  filepath.Join(cfg.PublicHTMLDir, "manpages"),
 	}
 
 	ctx := context.Background()
 	if err := runner.Run(ctx, cfg.ReleaseKeys()); err != nil {
+		if errors.Is(err, pipeline.ErrDiskFull) {
+			logger.Error("skipping reindex and sitemap generation due to low disk space")
+		}
 		return err
 	}
 	notifyReindex(logger, cfg.AdminAddr)

@@ -24,6 +24,7 @@ import (
 	"context"
 
 	"github.com/canonical/ubuntu-manpages-operator/internal/config"
+	"github.com/canonical/ubuntu-manpages-operator/internal/pipeline"
 	"github.com/canonical/ubuntu-manpages-operator/internal/search"
 	"github.com/canonical/ubuntu-manpages-operator/internal/sitemap"
 	"github.com/canonical/ubuntu-manpages-operator/internal/transform"
@@ -235,6 +236,7 @@ func (s *Server) ListenAndServe(addr, adminAddr string) error {
 	}
 
 	adminMux := http.NewServeMux()
+	adminMux.HandleFunc("GET /_/healthz", s.handleAdminHealth)
 	adminMux.HandleFunc("POST /_/reindex", s.handleReindex)
 	adminMux.HandleFunc("POST /_/regenerate-sitemaps", s.handleRegenerateSitemaps)
 	adminSrv := &http.Server{
@@ -411,6 +413,21 @@ func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+}
+
+func (s *Server) handleAdminHealth(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	storagePath := filepath.Join(s.cfg.PublicHTMLDir, "manpages")
+	if pipeline.DiskFull(storagePath) {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"status": "error",
+			"error":  "low disk space on manpages storage",
+		})
+		return
+	}
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 }

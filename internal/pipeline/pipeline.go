@@ -25,6 +25,7 @@ type Runner struct {
 	Logger           *slog.Logger
 	FailuresDir      string
 	ForceProcess     bool
+	StoragePath      string // checked for available disk space per package
 
 	mu              sync.Mutex
 	statuses        []ReleaseStatus
@@ -42,6 +43,9 @@ func (r *Runner) Run(ctx context.Context, releases []string) error {
 		r.statuses[i] = ReleaseStatus{Release: rel, Stage: "waiting"}
 	}
 
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	var wg sync.WaitGroup
 	var firstErr error
 	var errOnce sync.Once
@@ -52,6 +56,9 @@ func (r *Runner) Run(ctx context.Context, releases []string) error {
 			defer wg.Done()
 			if err := r.runRelease(ctx, idx, rel); err != nil {
 				errOnce.Do(func() { firstErr = err })
+				if errors.Is(err, ErrDiskFull) {
+					cancel()
+				}
 				r.mu.Lock()
 				r.statuses[idx].Stage = "error"
 				r.mu.Unlock()
@@ -116,7 +123,15 @@ func (r *Runner) runRelease(ctx context.Context, idx int, release string) error 
 	r.statuses[idx].Total = len(packages)
 	r.mu.Unlock()
 
-	for _, pkg := range packages {
+	for i, pkg := range packages {
+		if ctx.Err() != nil {
+			r.Logger.Error("release cancelled", "release", release, "remaining", len(packages)-i)
+			return ctx.Err()
+		}
+		if r.StoragePath != "" && DiskFull(r.StoragePath) {
+			r.Logger.Error("disk full, stopping ingest", "release", release, "remaining", len(packages)-i)
+			return fmt.Errorf("ingest %s: %w", release, ErrDiskFull)
+		}
 		if err := r.processPackage(ctx, idx, release, pkg, &relFetcher, extractor); err != nil {
 			r.recordFailure(idx, "package", pkg.Name, err)
 		}
