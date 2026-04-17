@@ -1,0 +1,15 @@
+name: Promote edge -> stable
+
+on:
+  workflow_dispatch:
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Promote snap to stable
+        env:
+          CHARMCRAFT_AUTH: ${{ secrets.CHARMHUB_TOKEN }}
+        run: |
+          sudo snap install --classic charmcraft
+          charmcraft promote --from-channel latest/edge --to-channel latest/stable --yes
