@@ -420,11 +420,11 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleAdminHealth(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	storagePath := filepath.Join(s.cfg.PublicHTMLDir, "manpages")
-	if pipeline.DiskFull(storagePath) {
+	if ok, reason := pipeline.CheckDiskSpace(storagePath); !ok {
 		w.WriteHeader(http.StatusServiceUnavailable)
 		_ = json.NewEncoder(w).Encode(map[string]string{
 			"status": "error",
-			"error":  "low disk space on manpages storage",
+			"error":  reason,
 		})
 		return
 	}

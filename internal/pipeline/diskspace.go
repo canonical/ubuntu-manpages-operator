@@ -5,17 +5,34 @@ import (
 	"syscall"
 )
 
-const minFreeBytes = 100 << 20 // 100 MiB
+const (
+	minFreeBytes  = 100 << 20 // 100 MiB
+	minFreeInodes = 1000
+)
 
-// ErrDiskFull is returned when the storage filesystem has less than 100 MiB available.
+// ErrDiskFull is returned when the storage filesystem has insufficient space or inodes.
 var ErrDiskFull = errors.New("low disk space on manpages storage")
 
-// DiskFull reports whether the filesystem containing path has less than 100 MiB available.
+// DiskFull reports whether the filesystem containing path has less than
+// 100 MiB available or fewer than 1000 free inodes.
 func DiskFull(path string) bool {
+	_, reason := CheckDiskSpace(path)
+	return reason != ""
+}
+
+// CheckDiskSpace returns (ok, reason). If ok is true, reason is empty.
+// Otherwise reason describes the problem (low space or low inodes).
+func CheckDiskSpace(path string) (bool, string) {
 	var stat syscall.Statfs_t
 	if err := syscall.Statfs(path, &stat); err != nil {
-		return false // if we can't check, assume OK
+		return true, "" // if we can't check, assume OK
 	}
 	avail := stat.Bavail * uint64(stat.Bsize)
-	return avail < minFreeBytes
+	if avail < minFreeBytes {
+		return false, "low disk space on manpages storage"
+	}
+	if stat.Ffree < minFreeInodes {
+		return false, "no inodes available on manpages storage"
+	}
+	return true, ""
 }
