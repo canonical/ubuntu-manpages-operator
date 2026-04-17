@@ -82,7 +82,7 @@ class Manpages:
                     "ready": {
                         "override": "replace",
                         "level": "ready",
-                        "period": "1m",
+                        "period": "30s",
                         "http": {"url": f"http://localhost:{ADMIN_PORT}/_/healthz"},
                         "startup": "enabled",
                     },
