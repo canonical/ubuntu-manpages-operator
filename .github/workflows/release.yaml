@@ -10,15 +10,21 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: read
+  contents: write
+  pull-requests: write
+  packages: write
 
 jobs:
+  
   test:
     name: Build and Test
     uses: ./.github/workflows/build-and-test.yaml
     permissions:
       contents: write
       pull-requests: write
+      packages: write
+    with:
+      publish: true
     secrets:
       CHARMHUB_TOKEN: "${{ secrets.CHARMHUB_TOKEN }}"
 
