@@ -3,9 +3,12 @@
 
 """Representation of the manpages service."""
 
+import json
 import logging
 import os
 import re
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 import ops
@@ -15,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 WWW_DIR = Path("/app") / "www"
 PORT = 8080
+ADMIN_PORT = 9090
 
 # Used to fetch release codenames from the config string passed to the charm.
 RELEASES_PATTERN = re.compile(r"([a-z]+)(?:[,][ ]*)*")
@@ -75,6 +79,13 @@ class Manpages:
                         "tcp": {"port": PORT},
                         "startup": "enabled",
                     },
+                    "ready": {
+                        "override": "replace",
+                        "level": "ready",
+                        "period": "1m",
+                        "http": {"url": f"http://localhost:{ADMIN_PORT}/_/healthz"},
+                        "startup": "enabled",
+                    },
                 },
             }
         )
@@ -124,6 +135,19 @@ class Manpages:
             except (ProtocolError, ConnectionError, PathError, APIError) as e:
                 logger.error("failed to remove manpages for '%s': %s", release, e)
                 raise
+
+    def get_health_error(self) -> str:
+        """Query the admin healthz endpoint for the specific error."""
+        try:
+            resp = urllib.request.urlopen(f"http://localhost:{ADMIN_PORT}/_/healthz", timeout=5)
+            data = json.loads(resp.read())
+            return data.get("error", "unhealthy")
+        except urllib.error.HTTPError as e:
+            # 503 response — read the JSON body for the error detail.
+            data = json.loads(e.read())
+            return data.get("error", "unhealthy")
+        except Exception:
+            return "health check failed"
 
     @property
     def updating(self) -> bool:

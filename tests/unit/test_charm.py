@@ -7,10 +7,12 @@ These tests only cover those methods that do not require internet access,
 and do not attempt to manipulate the underlying machine.
 """
 
+from unittest.mock import patch
+
 import pytest
 from ops import BlockedStatus
-from ops.pebble import Layer, ServiceStatus
-from ops.testing import ActiveStatus, Context, MaintenanceStatus, State, TCPPort
+from ops.pebble import CheckLevel, CheckStatus, Layer, ServiceStatus
+from ops.testing import ActiveStatus, CheckInfo, Context, MaintenanceStatus, State, TCPPort
 from scenario import Container
 
 from charm import ManpagesCharm
@@ -43,9 +45,11 @@ def test_manpages_pebble_ready(loaded_ctx):
 
     result = ctx.run(ctx.on.pebble_ready(container=container), state)
 
-    assert result.get_container("manpages").layers["manpages"] == manpages.pebble_layer(
-        "noble", "http://192.0.2.0:8080"
-    )
+    layer = manpages.pebble_layer("noble", "http://192.0.2.0:8080")
+    assert result.get_container("manpages").layers["manpages"] == layer
+    checks = layer.checks
+    assert "ready" in checks
+    assert checks["ready"].http == {"url": "http://localhost:9090/_/healthz"}
     assert result.get_container("manpages").service_statuses == {
         "manpages": ServiceStatus.ACTIVE,
         "ingest": ServiceStatus.ACTIVE,
@@ -135,3 +139,96 @@ def test_manpages_update_status_not_updating(loaded_ctx):
     result = ctx.run(ctx.on.update_status(), state)
 
     assert result.unit_status == ActiveStatus()
+
+
+CHECKS_LAYER = Layer(
+    {
+        "checks": {
+            "up": {
+                "override": "replace",
+                "level": "alive",
+                "period": "30s",
+                "tcp": {"port": 8080},
+                "startup": "enabled",
+                "threshold": 3,
+            },
+            "ready": {
+                "override": "replace",
+                "level": "ready",
+                "period": "1m",
+                "http": {"url": "http://localhost:9090/_/healthz"},
+                "startup": "enabled",
+                "threshold": 3,
+            },
+        },
+    }
+)
+
+
+@patch("manpages.Manpages.get_health_error", return_value="low disk space on manpages storage")
+def test_pebble_check_failed_disk_full(mock_health, charm):
+    ctx = Context(charm)
+    check_info = CheckInfo(
+        "ready",
+        level=CheckLevel.READY,
+        failures=3,
+        status=CheckStatus.DOWN,
+        threshold=3,
+    )
+    container = Container(
+        name="manpages",
+        can_connect=True,
+        layers={"manpages": CHECKS_LAYER},
+        check_infos={check_info},
+    )
+    state = State(containers=[container], config={"releases": "noble"})
+
+    result = ctx.run(ctx.on.pebble_check_failed(container, info=check_info), state)
+
+    assert result.unit_status == MaintenanceStatus("low disk space on manpages storage")
+
+
+def test_pebble_check_recovered(charm):
+    ctx = Context(charm)
+    check_info = CheckInfo(
+        "ready",
+        level=CheckLevel.READY,
+        status=CheckStatus.UP,
+        threshold=3,
+    )
+    container = Container(
+        name="manpages",
+        can_connect=True,
+        layers={"manpages": CHECKS_LAYER},
+        check_infos={check_info},
+    )
+    state = State(containers=[container], config={"releases": "noble"})
+
+    result = ctx.run(ctx.on.pebble_check_recovered(container, info=check_info), state)
+
+    assert result.unit_status == ActiveStatus()
+
+
+@patch("manpages.Manpages.get_health_error", return_value="low disk space on manpages storage")
+def test_pebble_check_failed_ignores_other_checks(mock_health, charm):
+    """Only the 'ready' check should trigger MaintenanceStatus."""
+    ctx = Context(charm)
+    check_info = CheckInfo(
+        "up",
+        level=CheckLevel.ALIVE,
+        failures=3,
+        status=CheckStatus.DOWN,
+        threshold=3,
+    )
+    container = Container(
+        name="manpages",
+        can_connect=True,
+        layers={"manpages": CHECKS_LAYER},
+        check_infos={check_info},
+    )
+    state = State(containers=[container], config={"releases": "noble"})
+
+    result = ctx.run(ctx.on.pebble_check_failed(container, info=check_info), state)
+
+    # Status should NOT be changed for the 'up' check.
+    assert result.unit_status != MaintenanceStatus("low disk space on manpages storage")

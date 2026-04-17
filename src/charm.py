@@ -25,6 +25,8 @@ class ManpagesCharm(ops.CharmBase):
         self._manpages = Manpages(self._container)
 
         framework.observe(self.on.manpages_pebble_ready, self._on_manpages_pebble_ready)
+        framework.observe(self.on.manpages_pebble_check_failed, self._on_pebble_check_failed)
+        framework.observe(self.on.manpages_pebble_check_recovered, self._on_pebble_check_recovered)
         framework.observe(self.on.update_status, self._on_update_status)
         framework.observe(self.on.update_manpages_action, self._on_config_changed)
         framework.observe(self.on.config_changed, self._on_config_changed)
@@ -76,6 +78,17 @@ class ManpagesCharm(ops.CharmBase):
                 "Failed to connect to workload container. Check `juju debug-log` for details."
             )
             return
+
+    def _on_pebble_check_failed(self, event: ops.PebbleCheckFailedEvent):
+        """Handle a Pebble health check failure."""
+        if event.info.name == "ready":
+            error_msg = self._manpages.get_health_error()
+            self.unit.status = ops.MaintenanceStatus(error_msg)
+
+    def _on_pebble_check_recovered(self, event: ops.PebbleCheckRecoveredEvent):
+        """Handle a Pebble health check recovery."""
+        if event.info.name == "ready":
+            self.unit.status = ops.ActiveStatus()
 
     def _on_update_status(self, _):
         """Update status."""
