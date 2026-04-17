@@ -128,9 +128,11 @@ func (r *Runner) runRelease(ctx context.Context, idx int, release string) error 
 			r.Logger.Error("release cancelled", "release", release, "remaining", len(packages)-i)
 			return ctx.Err()
 		}
-		if r.StoragePath != "" && DiskFull(r.StoragePath) {
-			r.Logger.Error("disk full, stopping ingest", "release", release, "remaining", len(packages)-i)
-			return fmt.Errorf("ingest %s: %w", release, ErrDiskFull)
+		if r.StoragePath != "" {
+			if ok, reason := CheckDiskSpace(r.StoragePath); !ok {
+				r.Logger.Error("disk full, stopping ingest", "release", release, "remaining", len(packages)-i, "reason", reason)
+				return fmt.Errorf("ingest %s: %s: %w", release, reason, ErrDiskFull)
+			}
 		}
 		if err := r.processPackage(ctx, idx, release, pkg, &relFetcher, extractor); err != nil {
 			r.recordFailure(idx, "package", pkg.Name, err)

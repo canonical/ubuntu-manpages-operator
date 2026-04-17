@@ -31,7 +31,11 @@ func CheckDiskSpace(path string) (bool, string) {
 	if avail < minFreeBytes {
 		return false, "low disk space on manpages storage"
 	}
-	if stat.Ffree < minFreeInodes {
+	// Filesystems with dynamic inode allocation (btrfs, zfs, xfs in some
+	// configurations) report Files == 0 to signal that no fixed inode count
+	// exists. Skip the inode check entirely in that case — Ffree is also 0
+	// and would otherwise trip the threshold on every call.
+	if stat.Files > 0 && stat.Ffree < minFreeInodes {
 		return false, "no inodes available on manpages storage"
 	}
 	return true, ""

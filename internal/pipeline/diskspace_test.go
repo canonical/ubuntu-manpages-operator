@@ -18,3 +18,14 @@ func TestDiskFull_NonExistentPath(t *testing.T) {
 		t.Error("DiskFull reported true for a non-existent path")
 	}
 }
+
+func TestCheckDiskSpace_ReportsReason(t *testing.T) {
+	// A normal filesystem should report ok with no reason.
+	ok, reason := CheckDiskSpace(os.TempDir())
+	if !ok {
+		t.Errorf("CheckDiskSpace reported not-ok on normal fs: %q", reason)
+	}
+	if reason != "" {
+		t.Errorf("CheckDiskSpace returned reason %q on ok fs", reason)
+	}
+}
