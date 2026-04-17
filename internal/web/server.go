@@ -692,6 +692,18 @@ func (s *Server) handleManpages(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Redirect old /en/ language prefix to the canonical (unprefixed) path.
+	// English manpages are stored without a language directory.
+	if len(parts) >= 4 && (parts[3] == "en" || strings.HasPrefix(parts[3], "en/")) {
+		rest := strings.TrimPrefix(parts[3], "en")
+		dest := s.basePath + "/manpages/" + parts[2] + rest
+		if strings.HasSuffix(r.URL.Path, "/") && !strings.HasSuffix(dest, "/") {
+			dest += "/"
+		}
+		http.Redirect(w, r, dest, http.StatusMovedPermanently)
+		return
+	}
+
 	fsPath := filepath.Join(s.cfg.PublicHTMLDir, clean)
 
 	// Serve plain text version of manpages for LLM consumption.

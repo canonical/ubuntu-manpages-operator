@@ -917,6 +917,49 @@ func TestLatestRedirectDirectory(t *testing.T) {
 	}
 }
 
+func TestEnglishLanguagePrefixRedirect(t *testing.T) {
+	srv, _ := testServer(t)
+
+	tests := []struct {
+		name    string
+		path    string
+		wantLoc string
+	}{
+		{
+			name:    "manpage with en prefix",
+			path:    "/manpages/noble/en/man1/ls.1.html",
+			wantLoc: "/manpages/noble/man1/ls.1.html",
+		},
+		{
+			name:    "directory with en prefix",
+			path:    "/manpages/noble/en/man1/",
+			wantLoc: "/manpages/noble/man1/",
+		},
+		{
+			name:    "bare en directory",
+			path:    "/manpages/noble/en/",
+			wantLoc: "/manpages/noble/",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, tt.path, nil)
+			w := httptest.NewRecorder()
+			srv.handleManpages(w, req)
+
+			resp := w.Result()
+			if resp.StatusCode != http.StatusMovedPermanently {
+				t.Fatalf("expected 301, got %d", resp.StatusCode)
+			}
+			loc := resp.Header.Get("Location")
+			if loc != tt.wantLoc {
+				t.Errorf("expected redirect to %s, got: %s", tt.wantLoc, loc)
+			}
+		})
+	}
+}
+
 func TestGroupSearchResultsUnknownDistro(t *testing.T) {
 	results := []search.Result{
 		{Title: "foo", Path: "/manpages/unknown/man1/foo.1.html", Distro: "unknown", Section: 1},
