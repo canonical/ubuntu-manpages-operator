@@ -140,12 +140,17 @@ class Manpages:
         """Query the admin healthz endpoint for the specific error."""
         try:
             resp = urllib.request.urlopen(f"http://localhost:{ADMIN_PORT}/_/healthz", timeout=5)
-            data = json.loads(resp.read())
+            body = resp.read().decode("utf-8").strip()
+            data = json.loads(body)
             return data.get("error", "unhealthy")
         except urllib.error.HTTPError as e:
             # 503 response — read the JSON body for the error detail.
-            data = json.loads(e.read())
-            return data.get("error", "unhealthy")
+            try:
+                body = e.read().decode("utf-8").strip()
+                data = json.loads(body)
+                return data.get("error", "unhealthy")
+            except (json.JSONDecodeError, UnicodeDecodeError):
+                return "unhealthy"
         except Exception:
             return "health check failed"
 
