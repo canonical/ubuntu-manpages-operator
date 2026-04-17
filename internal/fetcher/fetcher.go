@@ -26,17 +26,33 @@ type Package struct {
 }
 
 type Fetcher struct {
-	Archive string
-	Repos   []string
-	Archs   []string
-	Pockets []string
-	WorkDir string
-	Client  *http.Client
-	Logger  *slog.Logger
+	Archive       string
+	Repos         []string
+	Archs         []string
+	Pockets       []string
+	WorkDir       string
+	Client        *http.Client
+	Logger        *slog.Logger
+	MaxConcurrent int
+
+	// state holds concurrency control shared across shallow copies of the
+	// Fetcher (pipeline.go copies the struct to customise WorkDir per release;
+	// copies retain the same pointer so the concurrency budget is global).
+	state *fetcherState
 }
 
+type fetcherState struct {
+	sem chan struct{}
+}
+
+const defaultMaxConcurrent = 8
+
+// stateInit guards lazy initialisation of Fetcher.state for Fetchers that were
+// constructed as a struct literal instead of via New.
+var stateInit sync.Mutex
+
 func New(archive string, repos []string, archs []string, pockets []string, workDir string) *Fetcher {
-	return &Fetcher{
+	f := &Fetcher{
 		Archive: archive,
 		Repos:   repos,
 		Archs:   archs,
@@ -44,6 +60,60 @@ func New(archive string, repos []string, archs []string, pockets []string, workD
 		WorkDir: workDir,
 		Client:  &http.Client{Timeout: 5 * time.Minute},
 	}
+	f.ensureState()
+	return f
+}
+
+func (f *Fetcher) ensureState() {
+	stateInit.Lock()
+	defer stateInit.Unlock()
+	if f.state != nil {
+		return
+	}
+	n := f.MaxConcurrent
+	if n <= 0 {
+		n = defaultMaxConcurrent
+	}
+	f.state = &fetcherState{sem: make(chan struct{}, n)}
+}
+
+func (f *Fetcher) acquire(ctx context.Context) error {
+	select {
+	case f.state.sem <- struct{}{}:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+func (f *Fetcher) release() {
+	<-f.state.sem
+}
+
+// doWithRetry runs fn up to 3 times with linear backoff, returning the last
+// error. Context cancellation aborts immediately.
+func (f *Fetcher) doWithRetry(ctx context.Context, label, url string, fn func() error) error {
+	var lastErr error
+	for attempt := range 3 {
+		if attempt > 0 {
+			if f.Logger != nil {
+				f.Logger.Warn("retrying "+label, "url", url, "attempt", attempt+1, "error", lastErr)
+			}
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(time.Duration(attempt) * time.Second):
+			}
+		}
+		lastErr = fn()
+		if lastErr == nil {
+			return nil
+		}
+		if ctx.Err() != nil {
+			return lastErr
+		}
+	}
+	return lastErr
 }
 
 func (f *Fetcher) FetchPackages(ctx context.Context, release string) ([]Package, error) {
@@ -53,6 +123,7 @@ func (f *Fetcher) FetchPackages(ctx context.Context, release string) ([]Package,
 	if len(f.Pockets) == 0 {
 		f.Pockets = []string{"-updates", "-security", ""}
 	}
+	f.ensureState()
 
 	type fetchResult struct {
 		candidates []Package
@@ -85,18 +156,26 @@ func (f *Fetcher) FetchPackages(ctx context.Context, release string) ([]Package,
 		wg.Add(1)
 		go func(it workItem) {
 			defer wg.Done()
-			if f.Logger != nil {
-				f.Logger.Info("fetching packages", "dist", it.dist, "repo", it.repo, "arch", it.arch)
-			}
-			reader, err := f.openPackages(ctx, it.dist, it.repo, it.arch)
-			if err != nil {
+			if err := f.acquire(ctx); err != nil {
 				results[it.index] = fetchResult{err: fmt.Errorf("open packages %s %s %s: %w", it.dist, it.repo, it.arch, err)}
 				return
 			}
-			candidates, err := parsePackages(reader)
-			_ = reader.Close()
+			defer f.release()
+			if f.Logger != nil {
+				f.Logger.Info("fetching packages", "dist", it.dist, "repo", it.repo, "arch", it.arch)
+			}
+			var candidates []Package
+			err := f.doWithRetry(ctx, "packages fetch", f.packagesURL(it.dist, it.repo, it.arch), func() error {
+				reader, err := f.openPackages(ctx, it.dist, it.repo, it.arch)
+				if err != nil {
+					return err
+				}
+				candidates, err = parsePackages(reader)
+				_ = reader.Close()
+				return err
+			})
 			if err != nil {
-				results[it.index] = fetchResult{err: fmt.Errorf("parse packages %s %s %s: %w", it.dist, it.repo, it.arch, err)}
+				results[it.index] = fetchResult{err: fmt.Errorf("open packages %s %s %s: %w", it.dist, it.repo, it.arch, err)}
 				return
 			}
 			if f.Logger != nil {
@@ -142,67 +221,54 @@ func (f *Fetcher) FetchDeb(ctx context.Context, debURL string) (string, error) {
 		return "", fmt.Errorf("create work dir: %w", err)
 	}
 
-	var lastErr error
-	for attempt := range 3 {
-		if attempt > 0 {
-			if f.Logger != nil {
-				f.Logger.Warn("retrying download", "url", src, "attempt", attempt+1, "error", lastErr)
-			}
-			select {
-			case <-ctx.Done():
-				return "", ctx.Err()
-			case <-time.After(time.Duration(attempt) * time.Second):
-			}
+	err := f.doWithRetry(ctx, "download", src, func() error {
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, src, nil)
+		if err != nil {
+			return fmt.Errorf("build request: %w", err)
 		}
 
-		lastErr = func() error {
-			req, err := http.NewRequestWithContext(ctx, http.MethodGet, src, nil)
-			if err != nil {
-				return fmt.Errorf("build request: %w", err)
-			}
+		resp, err := f.Client.Do(req)
+		if err != nil {
+			return fmt.Errorf("download deb: %w", err)
+		}
+		defer func() { _ = resp.Body.Close() }()
 
-			resp, err := f.Client.Do(req)
-			if err != nil {
-				return fmt.Errorf("download deb: %w", err)
-			}
-			defer func() { _ = resp.Body.Close() }()
+		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+			return fmt.Errorf("download deb: status %s", resp.Status)
+		}
 
-			if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-				return fmt.Errorf("download deb: status %s", resp.Status)
-			}
+		tmp, err := os.CreateTemp(f.WorkDir, ".deb-*")
+		if err != nil {
+			return fmt.Errorf("create temp deb file: %w", err)
+		}
+		tmpPath := tmp.Name()
 
-			tmp, err := os.CreateTemp(f.WorkDir, ".deb-*")
-			if err != nil {
-				return fmt.Errorf("create temp deb file: %w", err)
-			}
-			tmpPath := tmp.Name()
-
-			const maxDebSize = 1024 * 1024 * 1024 // 1024 MB
-			if _, err := io.Copy(tmp, io.LimitReader(resp.Body, maxDebSize)); err != nil {
-				_ = tmp.Close()
-				_ = os.Remove(tmpPath)
-				return fmt.Errorf("write deb file: %w", err)
-			}
+		const maxDebSize = 1024 * 1024 * 1024 // 1024 MB
+		if _, err := io.Copy(tmp, io.LimitReader(resp.Body, maxDebSize)); err != nil {
 			_ = tmp.Close()
+			_ = os.Remove(tmpPath)
+			return fmt.Errorf("write deb file: %w", err)
+		}
+		_ = tmp.Close()
 
-			if err := os.Rename(tmpPath, destPath); err != nil {
-				_ = os.Remove(tmpPath)
-				return fmt.Errorf("rename deb file: %w", err)
-			}
-			return nil
-		}()
-		if lastErr == nil {
-			return destPath, nil
+		if err := os.Rename(tmpPath, destPath); err != nil {
+			_ = os.Remove(tmpPath)
+			return fmt.Errorf("rename deb file: %w", err)
 		}
-		if ctx.Err() != nil {
-			return "", lastErr
-		}
+		return nil
+	})
+	if err != nil {
+		return "", err
 	}
-	return "", lastErr
+	return destPath, nil
+}
+
+func (f *Fetcher) packagesURL(dist, repo, arch string) string {
+	return strings.TrimSuffix(f.Archive, "/") + "/dists/" + dist + "/" + repo + "/binary-" + arch + "/Packages.gz"
 }
 
 func (f *Fetcher) openPackages(ctx context.Context, dist string, repo string, arch string) (io.ReadCloser, error) {
-	url := strings.TrimSuffix(f.Archive, "/") + "/dists/" + dist + "/" + repo + "/binary-" + arch + "/Packages.gz"
+	url := f.packagesURL(dist, repo, arch)
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("build packages request: %w", err)
