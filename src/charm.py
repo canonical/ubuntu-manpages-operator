@@ -50,7 +50,6 @@ class ManpagesCharm(ops.CharmBase):
 
     def _on_config_changed(self, _):
         """Update configuration and fetch relevant manpages."""
-        self.unit.status = ops.MaintenanceStatus("Updating configuration")
         self._replan_workload()
 
     def _replan_workload(self):
@@ -69,7 +68,6 @@ class ManpagesCharm(ops.CharmBase):
             )
             return
 
-        self.unit.status = ops.MaintenanceStatus("Updating manpages")
         try:
             self._manpages.update_manpages(str(self.config["releases"]))
         except (ProtocolError, ConnectionError, APIError) as e:
@@ -79,11 +77,13 @@ class ManpagesCharm(ops.CharmBase):
             )
             return
 
+        self.unit.status = self._compute_status()
+
     def _on_pebble_check_failed(self, event: ops.PebbleCheckFailedEvent):
         """Handle a Pebble health check failure."""
         if event.info.name == "ready":
-            error_msg = self._manpages.get_health_error()
-            self.unit.status = ops.MaintenanceStatus(error_msg)
+            if err := self._manpages.health_error():
+                self.unit.status = ops.MaintenanceStatus(err)
 
     def _on_pebble_check_recovered(self, event: ops.PebbleCheckRecoveredEvent):
         """Handle a Pebble health check recovery."""
@@ -92,10 +92,15 @@ class ManpagesCharm(ops.CharmBase):
 
     def _on_update_status(self, _):
         """Update status."""
+        self.unit.status = self._compute_status()
+
+    def _compute_status(self) -> ops.StatusBase:
+        """Resolve the unit status from workload health and ingestion state."""
+        if err := self._manpages.health_error():
+            return ops.MaintenanceStatus(err)
         if self._manpages.updating:
-            self.unit.status = ops.MaintenanceStatus("Updating manpages")
-        else:
-            self.unit.status = ops.ActiveStatus()
+            return ops.MaintenanceStatus("Updating manpages")
+        return ops.ActiveStatus()
 
     def _get_external_url(self) -> str:
         """Report URL to access Ubuntu Manpages."""
