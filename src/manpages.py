@@ -81,7 +81,6 @@ class Manpages:
                     },
                     "ready": {
                         "override": "replace",
-                        "level": "ready",
                         "period": "30s",
                         "http": {"url": f"http://localhost:{ADMIN_PORT}/_/healthz"},
                         "startup": "enabled",
@@ -136,7 +135,19 @@ class Manpages:
                 logger.error("failed to remove manpages for '%s': %s", release, e)
                 raise
 
-    def get_health_error(self) -> str:
+    def health_error(self):
+        """Return the ready-check error message if it is currently failing, else None."""
+        try:
+            checks = self.container.get_checks("ready")
+        except (ProtocolError, ConnectionError, APIError, ops.ModelError) as e:
+            logger.error("failed to query pebble checks: %s", e)
+            return None
+        ready = checks.get("ready")
+        if ready is None or ready.status == ops.pebble.CheckStatus.UP:
+            return None
+        return self._fetch_health_error()
+
+    def _fetch_health_error(self) -> str:
         """Query the admin healthz endpoint for the specific error."""
         try:
             resp = urllib.request.urlopen(f"http://localhost:{ADMIN_PORT}/_/healthz", timeout=5)

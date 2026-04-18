@@ -154,7 +154,6 @@ CHECKS_LAYER = Layer(
             },
             "ready": {
                 "override": "replace",
-                "level": "ready",
                 "period": "1m",
                 "http": {"url": "http://localhost:9090/_/healthz"},
                 "startup": "enabled",
@@ -165,12 +164,12 @@ CHECKS_LAYER = Layer(
 )
 
 
-@patch("manpages.Manpages.get_health_error", return_value="low disk space on manpages storage")
+@patch("manpages.Manpages._fetch_health_error", return_value="low disk space on manpages storage")
 def test_pebble_check_failed_disk_full(mock_health, charm):
     ctx = Context(charm)
     check_info = CheckInfo(
         "ready",
-        level=CheckLevel.READY,
+        level=CheckLevel.UNSET,
         failures=3,
         status=CheckStatus.DOWN,
         threshold=3,
@@ -192,7 +191,7 @@ def test_pebble_check_recovered(charm):
     ctx = Context(charm)
     check_info = CheckInfo(
         "ready",
-        level=CheckLevel.READY,
+        level=CheckLevel.UNSET,
         status=CheckStatus.UP,
         threshold=3,
     )
@@ -209,7 +208,7 @@ def test_pebble_check_recovered(charm):
     assert result.unit_status == ActiveStatus()
 
 
-@patch("manpages.Manpages.get_health_error", return_value="low disk space on manpages storage")
+@patch("manpages.Manpages._fetch_health_error", return_value="low disk space on manpages storage")
 def test_pebble_check_failed_ignores_other_checks(mock_health, charm):
     """Only the 'ready' check should trigger MaintenanceStatus."""
     ctx = Context(charm)
@@ -232,3 +231,76 @@ def test_pebble_check_failed_ignores_other_checks(mock_health, charm):
 
     # Status should NOT be changed for the 'up' check.
     assert result.unit_status != MaintenanceStatus("low disk space on manpages storage")
+
+
+@patch("manpages.Manpages._fetch_health_error", return_value="low disk space on manpages storage")
+def test_update_status_preserves_health_error(mock_health, charm):
+    """update_status must not clobber a failing ready check with ActiveStatus."""
+    ctx = Context(charm)
+    check_info = CheckInfo(
+        "ready",
+        level=CheckLevel.UNSET,
+        failures=3,
+        status=CheckStatus.DOWN,
+        threshold=3,
+    )
+    container = Container(
+        name="manpages",
+        can_connect=True,
+        layers={"manpages": CHECKS_LAYER},
+        check_infos={check_info},
+        service_statuses={"ingest": ServiceStatus.INACTIVE},
+    )
+    state = State(containers=[container], config={"releases": "noble"})
+
+    result = ctx.run(ctx.on.update_status(), state)
+
+    assert result.unit_status == MaintenanceStatus("low disk space on manpages storage")
+
+
+@patch("manpages.Manpages._fetch_health_error", return_value="low disk space on manpages storage")
+def test_update_status_preserves_health_error_over_updating(mock_health, charm):
+    """A failing health check is more informative than 'Updating manpages'."""
+    ctx = Context(charm)
+    check_info = CheckInfo(
+        "ready",
+        level=CheckLevel.UNSET,
+        failures=3,
+        status=CheckStatus.DOWN,
+        threshold=3,
+    )
+    container = Container(
+        name="manpages",
+        can_connect=True,
+        layers={"manpages": CHECKS_LAYER},
+        check_infos={check_info},
+        service_statuses={"ingest": ServiceStatus.ACTIVE},
+    )
+    state = State(containers=[container], config={"releases": "noble"})
+
+    result = ctx.run(ctx.on.update_status(), state)
+
+    assert result.unit_status == MaintenanceStatus("low disk space on manpages storage")
+
+
+def test_update_status_active_when_ready_up(charm):
+    """Regression guard: with ready UP and ingest inactive, status is Active."""
+    ctx = Context(charm)
+    check_info = CheckInfo(
+        "ready",
+        level=CheckLevel.UNSET,
+        status=CheckStatus.UP,
+        threshold=3,
+    )
+    container = Container(
+        name="manpages",
+        can_connect=True,
+        layers={"manpages": CHECKS_LAYER},
+        check_infos={check_info},
+        service_statuses={"ingest": ServiceStatus.INACTIVE},
+    )
+    state = State(containers=[container], config={"releases": "noble"})
+
+    result = ctx.run(ctx.on.update_status(), state)
+
+    assert result.unit_status == ActiveStatus()
