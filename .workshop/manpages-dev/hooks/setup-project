@@ -1,0 +1,14 @@
+#!/bin/bash -e
+sudo -i -u workshop -- bash -e << 'EOF'
+set -e
+cd /project
+
+# Install the charm's runtime + dev deps (ops[testing], pytest, ruff, ty,
+# jubilant, requests, coverage) into the workshop-isolated venv at
+# $UV_PROJECT_ENVIRONMENT.
+uv sync --all-extras
+
+# Warm the Go module cache so the first `go-test` / `build` run isn't
+# delayed pulling pault.ag/go/debian etc.
+go mod download
+EOF

@@ -1,0 +1,20 @@
+#!/bin/bash -e
+# Install OS packages the workshop actions need.
+#
+# - mandoc: the Go ingest pipeline shells out to `mandoc` to convert roff
+#   manpages to HTML. The unit tests don't exec it, but `workshop shell` /
+#   `ingest` / `ingest-pkg` runs are unusable without it, and it's cheap.
+# - make: drives the `lint` / `format` / `unit` / `integration` targets.
+# - git: charmcraft's uv plugin and the `git describe > version` step in
+#   charmcraft.yaml's override-build need it.
+# - build-essential, pkg-config: some indirect deps build C extensions at
+#   `uv sync` time and need a compiler on PATH.
+apt-get update
+apt-get install -y --no-install-recommends \
+    mandoc make git build-essential pkg-config
+
+# uv hardlinks by default, which fails across the workshop mount boundary.
+echo UV_LINK_MODE=copy >> /etc/environment
+# Keep the workshop venv off the host's mounted project directory so it
+# doesn't collide with a host-side `.venv` from a parallel `make unit`.
+echo UV_PROJECT_ENVIRONMENT=/tmp/workshop-uv-venv >> /etc/environment

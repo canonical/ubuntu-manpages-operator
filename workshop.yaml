@@ -1,0 +1,95 @@
+# Workshop definition for developing the ubuntu-manpages-operator.
+#
+# This repo contains two projects that build together:
+#   - A Go application (cmd/{server,ingest,ingest-pkg}) packaged as an OCI rock.
+#   - A Python charm (src/charm.py) deployed via Juju on Kubernetes.
+#
+# Day-to-day development covers lint, format, and unit tests for both
+# halves. Charm packing (charmcraft), rock building (rockcraft), and the
+# jubilant integration tests aren't wired up as actions here:
+#   - charmcraft pack / rockcraft pack need LXD inside the workshop (nested).
+#   - integration tests need a real Juju model, which can't run here.
+#
+# To override the Go toolchain (for example, when the go.mod `go` directive is bumped):
+#
+#   workshop refresh dev --sdk go=<channel>
+
+name: dev
+base: ubuntu@26.04
+
+sdks:
+  - name: go
+    slots:
+      # Forward the Go server's :8080 to the host so the rendered site is
+      # reachable in a browser without leaving the workshop. Auto-connects
+      # (plug on system, slot on a regular SDK, matching name, localhost).
+      web:
+        interface: tunnel
+        endpoint: localhost:8080
+  - name: uv
+  - name: project-manpages-dev  # .workshop/manpages-dev/sdk.yaml
+  - name: system
+    plugs:
+      web:
+        interface: tunnel
+        endpoint: localhost:8080
+
+actions:
+  # Full lint pass: go vet + ruff check + ruff format --check + ty.
+  lint: |
+    make lint
+
+  # Apply formatting fixes (go fmt + ruff --fix + ruff format).
+  format: |
+    make format
+
+  # Full unit test suite: go test ./... plus pytest with coverage.
+  unit: |
+    make unit
+
+  # Just the Go test suite, with the race detector. Faster than `unit` when
+  # iterating on Go code. Extra args are forwarded (e.g. `-run TestFoo`).
+  go-test: |
+    go test -race -v ./... "$@"
+
+  # Just the Python charm tests. Faster than `unit` when iterating on the
+  # charm. PYTHONPATH mirrors the Makefile so `import charm` etc. resolves.
+  pytest: |
+    PYTHONPATH=/project:/project/lib:/project/src \
+      uv run --all-extras pytest --ignore=tests/integration --tb native -v "$@"
+
+  # Type checks alone — useful as a `workshop run` watch loop target.
+  static-check: |
+    uv run --all-extras ty check src tests
+
+  # Build all three Go binaries with the same flags CI uses. Confirms the
+  # codebase compiles before pushing. Output goes inside the workshop, not
+  # /project/bin, to avoid clobbering host `make build` artifacts and to
+  # skip the bind-mount overhead.
+  build: |
+    out="${MANPAGES_BIN_DIR:-/home/workshop/bin}"
+    mkdir -p "$out"
+    CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o "$out/server"     ./cmd/server
+    CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o "$out/ingest"     ./cmd/ingest
+    CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o "$out/ingest-pkg" ./cmd/ingest-pkg
+    echo "Built $out/{server,ingest,ingest-pkg}"
+
+  # Run the HTTP server. The `go:web` tunnel forwards :8080 to the host,
+  # so the site is reachable at http://localhost:8080. The server itself
+  # is quiet until a request arrives, so print a banner up front. Extra
+  # args are forwarded (currently none accepted, but kept for symmetry).
+  serve: |
+    addr="${MANPAGES_ADDR:-:8080}"
+    # The production default (/app/www) isn't writable in the workshop, and
+    # /project/www would pollute the host working tree and go through the
+    # slower bind mount. Keep ingest output inside the workshop instead;
+    # it's ephemeral test data, cleared by `workshop remove`.
+    export MANPAGES_PUBLIC_HTML_DIR="${MANPAGES_PUBLIC_HTML_DIR:-/home/workshop/www}"
+    echo "Starting manpages server on ${addr} (http://localhost${addr})"
+    go run ./cmd/server "$@"
+
+  # Single-package ingest for the dev/debug loop, for example:
+  #   workshop run ingest-pkg -- -release noble -package coreutils
+  ingest-pkg: |
+    export MANPAGES_PUBLIC_HTML_DIR="${MANPAGES_PUBLIC_HTML_DIR:-/home/workshop/www}"
+    go run ./cmd/ingest-pkg "$@"

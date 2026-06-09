@@ -103,6 +103,39 @@ To create the environment manually:
 ❯ uv sync --all-extras
 ```
 
+## Workshop (alternative dev environment)
+
+[Workshop](https://ubuntu.com/workshop/) provides a reproducible LXD-backed
+dev environment for this repo. Both the Go app and the Python charm build inside
+one workshop, with no need for `mandoc` on the host.
+
+```bash
+sudo snap install workshop --classic
+workshop launch                       # first run only; takes a few minutes
+workshop run lint                     # or: format, unit, go-test, pytest, static-check, build
+workshop run serve                    # run cmd/server; site at http://localhost:8080
+workshop run ingest-pkg -- -release noble -package coreutils  # single-package debug
+workshop shell                        # interactive shell inside the workshop
+```
+
+Charm packing (`charmcraft pack`), rock building (`rockcraft pack`), and the
+jubilant integration tests are deliberately not wired up as actions. They need
+nested LXD or a real Juju model. Run those on the host as usual.
+
+### Sharing build caches with the host (optional)
+
+By default the Go module cache and uv cache live inside the workshop, isolated
+from the host's `~/go/pkg/mod` and `~/.cache/uv`. To share them (useful if you
+also build on the host, or run multiple workshops) bind the SDK mount plugs to
+host paths once per workshop:
+
+```bash
+workshop remount dev/go:mod-cache ~/go/pkg/mod
+workshop remount dev/uv:cache     ~/.cache/uv
+```
+
+These connections persist across `workshop refresh` and `workshop stop`/`start`.
+
 ## Running tests
 
 Unit tests can be run locally with no additional tools by running `make unit`. All of the project's unit tests are designed to run agnostic of machine and network, and shouldn't require any additional dependencies other than those injected by `uv run` and the `Make` target.

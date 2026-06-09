@@ -31,3 +31,6 @@ scripts/
 
 # Config file
 .env
+
+# Workshop runtime lock
+.workshop.lock

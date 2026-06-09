@@ -1,0 +1,30 @@
+#!/bin/bash
+# Healthy when `go`, `uv`, `make`, and `mandoc` are on PATH and the charm
+# package imports in the synced venv. Run as workshop, not root, to match
+# the environment the actions actually use.
+#
+# On failure, report which specific check tripped so the user knows whether
+# to re-run setup-base (missing tool), setup-project (broken venv), or file
+# a bug (something stranger).
+missing=()
+for tool in go uv make mandoc; do
+    if ! sudo -H -i -u workshop -- command -v "$tool" >/dev/null 2>&1; then
+        missing+=("$tool")
+    fi
+done
+
+if [ ${#missing[@]} -ne 0 ]; then
+    workshopctl set-health --code="manpages-tools-missing" error \
+        "missing tool(s) on PATH for workshop user: ${missing[*]} (re-run 'workshop refresh dev' to reinstall)"
+    exit 0
+fi
+
+import_err=$(sudo -H -i -u workshop -- bash -c \
+    'cd /project && PYTHONPATH=/project:/project/lib:/project/src uv run python -c "import charm"' 2>&1)
+if [ $? -ne 0 ]; then
+    workshopctl set-health --code="manpages-charm-import-failed" error \
+        "charm package failed to import in the workshop venv (uv sync may be stale); first error: ${import_err##*$'\n'}"
+    exit 0
+fi
+
+workshopctl set-health okay
