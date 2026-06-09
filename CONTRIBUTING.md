@@ -119,7 +119,7 @@ workshop shell                        # interactive shell inside the workshop
 ```
 
 Charm packing (`charmcraft pack`), rock building (`rockcraft pack`), and the
-jubilant integration tests are deliberately not wired up as actions — they need
+jubilant integration tests are deliberately not wired up as actions. They need
 nested LXD or a real Juju model. Run those on the host as usual.
 
 ### Sharing build caches with the host (optional)

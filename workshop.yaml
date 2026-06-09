@@ -7,12 +7,10 @@
 # Day-to-day development covers lint, format, and unit tests for both
 # halves. Charm packing (charmcraft), rock building (rockcraft), and the
 # jubilant integration tests aren't wired up as actions here:
-#   - charmcraft pack / rockcraft pack need LXD inside the workshop (nested);
-#     a separate `lxd` SDK is the right answer but is out of scope for the
-#     initial spike.
+#   - charmcraft pack / rockcraft pack need LXD inside the workshop (nested).
 #   - integration tests need a real Juju model, which can't run here.
 #
-# To override the Go toolchain (e.g. when the go.mod `go` directive is bumped):
+# To override the Go toolchain (for example, when the go.mod `go` directive is bumped):
 #
 #   workshop refresh dev --sdk go=<channel>
 
@@ -90,7 +88,7 @@ actions:
     echo "Starting manpages server on ${addr} (http://localhost${addr})"
     go run ./cmd/server "$@"
 
-  # Single-package ingest for the dev/debug loop, e.g.:
+  # Single-package ingest for the dev/debug loop, for example:
   #   workshop run ingest-pkg -- -release noble -package coreutils
   ingest-pkg: |
     export MANPAGES_PUBLIC_HTML_DIR="${MANPAGES_PUBLIC_HTML_DIR:-/home/workshop/www}"
