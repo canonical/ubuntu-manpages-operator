@@ -1,0 +1,17 @@
+#!/bin/bash
+# Healthy when `go`, `uv`, `make`, and `mandoc` are on PATH and the charm
+# package imports in the synced venv. Run as workshop, not root, to match
+# the environment the actions actually use.
+if sudo -H -i -u workshop -- bash -c \
+    'command -v go >/dev/null \
+        && command -v uv >/dev/null \
+        && command -v make >/dev/null \
+        && command -v mandoc >/dev/null \
+        && cd /project \
+        && PYTHONPATH=/project:/project/lib:/project/src \
+            uv run python -c "import charm"'
+then
+    workshopctl set-health okay
+else
+    workshopctl set-health --code="manpages-env-broken" error
+fi

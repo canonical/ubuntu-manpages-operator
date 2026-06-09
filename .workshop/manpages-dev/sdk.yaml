@@ -1,0 +1,11 @@
+# In-project SDK for developing the ubuntu-manpages-operator. Consumed as
+# `project-manpages-dev` from workshop.yaml. In-project SDKs have no
+# build-time features (no base/build-base/platforms/parts) — they're
+# configured entirely via the hooks under hooks/.
+#
+# Relies on the `uv` and `go` SDKs already being present in the workshop:
+# setup-base only handles OS packages (mandoc, make, git) and env vars;
+# setup-project runs `uv sync` and warms the Go module cache.
+name: manpages-dev
+version: "0"
+summary: In-project setup for developing the ubuntu-manpages-operator

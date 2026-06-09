@@ -1,0 +1,60 @@
+# Workshop definition for developing the ubuntu-manpages-operator.
+#
+# This repo contains two projects that build together:
+#   - A Go application (cmd/{server,ingest,ingest-pkg}) packaged as an OCI rock.
+#   - A Python charm (src/charm.py) deployed via Juju on Kubernetes.
+#
+# Day-to-day development covers lint, format, and unit tests for both
+# halves. Charm packing (charmcraft), rock building (rockcraft), and the
+# jubilant integration tests aren't wired up as actions here:
+#   - charmcraft pack / rockcraft pack need LXD inside the workshop (nested);
+#     a separate `lxd` SDK is the right answer but is out of scope for the
+#     initial spike.
+#   - integration tests need a real Juju model, which can't run here.
+#
+# To override the Go toolchain (e.g. when the go.mod `go` directive is bumped):
+#
+#   workshop refresh dev --sdk go=<channel>
+
+name: dev
+base: ubuntu@24.04
+
+sdks:
+  - name: go
+  - name: uv
+  - name: project-manpages-dev  # .workshop/manpages-dev/sdk.yaml
+
+actions:
+  # Full lint pass: go vet + ruff check + ruff format --check + ty.
+  lint: |
+    make lint
+
+  # Apply formatting fixes (go fmt + ruff --fix + ruff format).
+  format: |
+    make format
+
+  # Full unit test suite: go test ./... plus pytest with coverage.
+  unit: |
+    make unit
+
+  # Just the Go test suite, with the race detector. Faster than `unit` when
+  # iterating on Go code. Extra args are forwarded (e.g. `-run TestFoo`).
+  go-test: |
+    go test -race -v ./... "$@"
+
+  # Just the Python charm tests. Faster than `unit` when iterating on the
+  # charm. PYTHONPATH mirrors the Makefile so `import charm` etc. resolves.
+  pytest: |
+    PYTHONPATH=/project:/project/lib:/project/src \
+      uv run --all-extras pytest --ignore=tests/integration --tb native -v "$@"
+
+  # Type checks alone — useful as a `workshop run` watch loop target.
+  static-check: |
+    uv run --all-extras ty check src tests
+
+  # Build all three Go binaries with the same flags CI uses, into ./bin/.
+  # Confirms the codebase compiles before pushing.
+  build: |
+    CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o bin/server ./cmd/server
+    CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o bin/ingest ./cmd/ingest
+    CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o bin/ingest-pkg ./cmd/ingest-pkg
