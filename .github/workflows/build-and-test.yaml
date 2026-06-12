@@ -83,7 +83,6 @@ jobs:
         if: ${{ inputs.publish }}
         id: get_version
         run: |
-          sudo snap install yq --classic
           version="$(yq '.version' rockcraft.yaml)"
           echo "VERSION=$version" >> $GITHUB_OUTPUT
 
@@ -130,11 +129,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-wheel-cache-
       
-      - name: Update charm to use test Rock
-        if: ${{ !inputs.publish }}
-        run: |
-          yq -i '.resources.manpages-image.upstream-source = "ttl.sh/ubuntu-manpages-${{ github.run_id }}:2h"' charmcraft.yaml
-
       - name: Pack charm
         run: charmcraft pack -v
 
@@ -190,6 +184,11 @@ jobs:
 
       - name: Install charmcraft
         run: sudo snap install charmcraft --classic
+
+      - name: Configure test ROCK resource
+        if: ${{ !inputs.publish }}
+        run: |
+          yq -i '.resources.manpages-image.upstream-source = "ttl.sh/ubuntu-manpages-${{ github.run_id }}:2h"' charmcraft.yaml
 
       - name: Run integration tests
         run: |
