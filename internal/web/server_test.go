@@ -49,6 +49,19 @@ func testServer(t *testing.T) (*Server, *config.Config) {
 	return srv, cfg
 }
 
+func sidebarHTML(t *testing.T, text string) string {
+	t.Helper()
+	start := strings.Index(text, `<aside class="l-docs__sidebar">`)
+	if start == -1 {
+		t.Fatal("missing sidebar")
+	}
+	end := strings.Index(text[start:], `</aside>`)
+	if end == -1 {
+		t.Fatal("missing sidebar end")
+	}
+	return text[start : start+end+len(`</aside>`)]
+}
+
 func TestHandleRobotsTxt(t *testing.T) {
 	srv, _ := testServer(t)
 
@@ -814,15 +827,23 @@ func TestOtherVersionsOnlyExisting(t *testing.T) {
 		t.Fatalf("expected 200, got %d", resp.StatusCode)
 	}
 
+	sidebar := sidebarHTML(t, text)
+	if strings.Contains(sidebar, "<strong>Releases</strong>") {
+		t.Fatal("manpage sidebar should not include top-level releases")
+	}
+	if strings.Contains(sidebar, `href="/manpages/noble"`) {
+		t.Error("manpage sidebar should not link to top-level release pages")
+	}
+
 	// The "Other versions" section should contain noble (exists on disk).
-	if !strings.Contains(text, "Other versions") {
+	if !strings.Contains(sidebar, "Other versions") {
 		t.Fatal("expected 'Other versions' section")
 	}
-	if !strings.Contains(text, `/manpages/noble/man1/ls.1.html`) {
+	if !strings.Contains(sidebar, `/manpages/noble/man1/ls.1.html`) {
 		t.Error("expected link to noble manpage")
 	}
 	// jammy should NOT appear because the file doesn't exist on disk.
-	if strings.Contains(text, `/manpages/jammy/man1/ls.1.html`) {
+	if strings.Contains(sidebar, `/manpages/jammy/man1/ls.1.html`) {
 		t.Error("should not show link to jammy manpage that doesn't exist")
 	}
 }

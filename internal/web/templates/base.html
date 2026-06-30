@@ -46,12 +46,14 @@
               <li><a href="{{ urlFor "/search" }}"{{ if eq .ActiveNav "search" }} class="is-active"{{ end }}>Search</a></li>
               <li><a href="{{ urlFor "/manpages" }}"{{ if eq .ActiveNav "browse" }} class="is-active"{{ end }}>Browse</a></li>
             </ul>
+            {{ block "sidebar-releases" . }}
             <ul>
               <li><strong>Releases</strong></li>
               {{ range reverseReleases .Releases }}
               <li><a href="{{ urlFor "/manpages/" }}{{ .Name }}">{{ .Label }}</a></li>
               {{ end }}
             </ul>
+            {{ end }}
             {{ block "sidebar-extra" . }}{{ end }}
           </div>
         </nav>
