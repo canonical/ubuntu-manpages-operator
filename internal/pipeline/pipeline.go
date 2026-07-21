@@ -156,8 +156,8 @@ func (r *Runner) processPackage(ctx context.Context, idx int, release string, pk
 		r.Logger.Info("processing package", "release", release, "package", pkg.Name)
 	}
 
-	if !r.ForceProcess && pkg.Name != "" && pkg.SHA1 != "" {
-		if r.Storage.CheckCache(release, pkg.Name, pkg.SHA1) {
+	if !r.ForceProcess && pkg.Name != "" && pkg.Hash != "" {
+		if r.Storage.CheckCache(release, pkg.Name, pkg.Hash) {
 			if r.Logger != nil {
 				r.Logger.Debug("skipping unchanged package", "release", release, "package", pkg.Name)
 			}
@@ -186,8 +186,8 @@ func (r *Runner) processPackage(ctx context.Context, idx int, release string, pk
 		}
 	}
 
-	if pkg.Name != "" && pkg.SHA1 != "" {
-		if err := r.Storage.WriteCache(ctx, release, pkg.Name, pkg.SHA1); err != nil {
+	if pkg.Name != "" && pkg.Hash != "" {
+		if err := r.Storage.WriteCache(ctx, release, pkg.Name, pkg.Hash); err != nil {
 			return fmt.Errorf("write cache for %s: %w", pkg.Name, err)
 		}
 	}

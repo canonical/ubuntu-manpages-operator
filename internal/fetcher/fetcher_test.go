@@ -8,10 +8,64 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
 )
+
+func TestParsePackages_HashFallback(t *testing.T) {
+	// Some archives (e.g. newer Ubuntu releases) only publish a subset of
+	// checksum fields. parsePackages must not silently drop packages that
+	// lack SHA1 as long as some checksum is present, and must prefer
+	// SHA512 over SHA256 over SHA1 over MD5sum when several are present.
+	input := "Package: sha512-only\n" +
+		"Version: 1.0-1\n" +
+		"Filename: pool/s/sha512-only.deb\n" +
+		"SHA512: deadbeef\n" +
+		"\n" +
+		"Package: sha1-and-sha256\n" +
+		"Version: 1.0-1\n" +
+		"Filename: pool/s/sha1-and-sha256.deb\n" +
+		"SHA1: aaa\n" +
+		"SHA256: bbb\n" +
+		"\n" +
+		"Package: all-hashes\n" +
+		"Version: 1.0-1\n" +
+		"Filename: pool/a/all-hashes.deb\n" +
+		"MD5sum: ccc\n" +
+		"SHA1: ddd\n" +
+		"SHA256: eee\n" +
+		"SHA512: fff\n" +
+		"\n" +
+		"Package: no-checksum\n" +
+		"Version: 1.0-1\n" +
+		"Filename: pool/n/no-checksum.deb\n" +
+		"\n"
+
+	got, err := parsePackages(strings.NewReader(input))
+	if err != nil {
+		t.Fatalf("parsePackages: %v", err)
+	}
+
+	want := map[string]string{
+		"sha512-only":     "deadbeef",
+		"sha1-and-sha256": "bbb",
+		"all-hashes":      "fff",
+	}
+	if len(got) != len(want) {
+		t.Fatalf("expected %d packages (no-checksum should be dropped), got %d: %+v", len(want), len(got), got)
+	}
+	for _, pkg := range got {
+		hash, ok := want[pkg.Name]
+		if !ok {
+			t.Fatalf("unexpected package %q in results", pkg.Name)
+		}
+		if pkg.Hash != hash {
+			t.Errorf("package %q: expected hash %q, got %q", pkg.Name, hash, pkg.Hash)
+		}
+	}
+}
 
 func TestFetchDeb_RetriesOnConnectionReset(t *testing.T) {
 	var attempts atomic.Int32
@@ -94,11 +148,11 @@ func TestFetchDeb_FailsAfterAllRetries(t *testing.T) {
 func TestFetchPackages_RetriesOnConnectionReset(t *testing.T) {
 	var attempts atomic.Int32
 
-	entries := []Package{{Name: "foo", Version: "1.0-1", Filename: "pool/f/foo.deb", SHA1: "aaa"}}
+	entries := []Package{{Name: "foo", Version: "1.0-1", Filename: "pool/f/foo.deb", Hash: "aaa"}}
 	var body bytes.Buffer
 	for _, p := range entries {
 		fmt.Fprintf(&body, "Package: %s\nVersion: %s\nFilename: %s\nSHA1: %s\n\n",
-			p.Name, p.Version, p.Filename, p.SHA1)
+			p.Name, p.Version, p.Filename, p.Hash)
 	}
 	var gz bytes.Buffer
 	gw := gzip.NewWriter(&gz)
@@ -219,7 +273,7 @@ func TestFetchPackagesParallel(t *testing.T) {
 		var buf bytes.Buffer
 		for _, p := range entries {
 			fmt.Fprintf(&buf, "Package: %s\nVersion: %s\nFilename: %s\nSHA1: %s\n\n",
-				p.Name, p.Version, p.Filename, p.SHA1)
+				p.Name, p.Version, p.Filename, p.Hash)
 		}
 		var gz bytes.Buffer
 		w := gzip.NewWriter(&gz)
@@ -230,12 +284,12 @@ func TestFetchPackagesParallel(t *testing.T) {
 
 	// Two "pockets" serve overlapping packages with different versions.
 	pocket1 := makePackagesGz([]Package{
-		{Name: "foo", Version: "2.0-1", Filename: "pool/f/foo_2.deb", SHA1: "aaa"},
-		{Name: "bar", Version: "1.0-1", Filename: "pool/b/bar_1.deb", SHA1: "bbb"},
+		{Name: "foo", Version: "2.0-1", Filename: "pool/f/foo_2.deb", Hash: "aaa"},
+		{Name: "bar", Version: "1.0-1", Filename: "pool/b/bar_1.deb", Hash: "bbb"},
 	})
 	pocket2 := makePackagesGz([]Package{
-		{Name: "foo", Version: "1.0-1", Filename: "pool/f/foo_1.deb", SHA1: "ccc"},
-		{Name: "baz", Version: "3.0-1", Filename: "pool/b/baz_3.deb", SHA1: "ddd"},
+		{Name: "foo", Version: "1.0-1", Filename: "pool/f/foo_1.deb", Hash: "ccc"},
+		{Name: "baz", Version: "3.0-1", Filename: "pool/b/baz_3.deb", Hash: "ddd"},
 	})
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

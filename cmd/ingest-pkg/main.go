@@ -121,8 +121,8 @@ func run(logger *slog.Logger, cfg *config.Config, release, pkgName string) error
 	}
 
 	// Write cache so subsequent full ingests see this package as processed.
-	if pkg.SHA1 != "" {
-		if err := storage.WriteCache(ctx, release, pkg.Name, pkg.SHA1); err != nil {
+	if pkg.Hash != "" {
+		if err := storage.WriteCache(ctx, release, pkg.Name, pkg.Hash); err != nil {
 			return fmt.Errorf("write cache: %w", err)
 		}
 	}

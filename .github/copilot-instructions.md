@@ -36,7 +36,7 @@ internal/             # Go internal packages
   pipeline/           #   Orchestrates extraction, conversion, transformation, and storage
   search/             #   In-memory indexed manpage search (with fuzzy matching via Damerau-Levenshtein)
   sitemap/            #   XML sitemap generation
-  storage/            #   Filesystem-based HTML/gzip storage with per-package SHA1 cache
+  storage/            #   Filesystem-based HTML/gzip storage with a per-package checksum cache
   transform/          #   8-stage HTML transformation pipeline (mandoc output → web-ready HTML)
   web/                #   HTTP server, routes, templates, static assets
     templates/        #   Go html/template files (base, base-landing, head, nav, footer, search-form, index, manpage, browse, search, 404)
@@ -91,20 +91,20 @@ The `server` and `ingest` binaries have no CLI flags — all configuration comes
 | `MANPAGES_ARCH`            | `amd64`                                                  | Architecture to fetch packages for                     |
 | `MANPAGES_ADDR`            | `:8080`                                                  | HTTP bind address (server only)                        |
 | `MANPAGES_LOG_LEVEL`       | `info`                                                   | Log level (debug, info, warn, error)                   |
-| `MANPAGES_FORCE`           | `false`                                                  | Force reprocessing of all packages (ignore SHA1 cache) |
+| `MANPAGES_FORCE`           | `false`                                                  | Force reprocessing of all packages (ignore checksum cache) |
 
 ### Ingest Pipeline
 
 For each release (processed concurrently):
 
 1. **Fetch** `Packages.gz` index files from the archive (across pockets: base, `-updates`, `-security`), deduplicate by highest version.
-2. **Per package**: check SHA1 cache → download `.deb` → extract manpages → for each manpage:
+2. **Per package**: check checksum cache → download `.deb` → extract manpages → for each manpage:
    - Parse the path to determine output location.
    - Handle symlinks and `.so` references.
    - Convert roff → HTML using `mandoc`.
    - Run 8-stage HTML transform pipeline (rewrite links, extract title, structure headings, generate TOC, inject metadata).
    - Write HTML and gzip outputs to the filesystem.
-   - Update SHA1 cache so unchanged packages are skipped on the next run.
+   - Update checksum cache so unchanged packages are skipped on the next run.
 3. **Generate sitemaps** per release/section.
 
 Failures are non-fatal per manpage — errors are logged and counted. A summary is printed at the end.
@@ -161,7 +161,7 @@ cp .env.example .env   # edit as needed
 # Ingest a subset of releases
 MANPAGES_RELEASES=noble ./bin/ingest
 
-# Force reprocessing (ignore SHA1 cache)
+# Force reprocessing (ignore checksum cache)
 MANPAGES_FORCE=true ./bin/ingest
 
 # Ingest a single package (for debugging)
@@ -249,7 +249,7 @@ All JavaScript in `internal/web/static/` uses modern ES6/7 syntax:
 
 ## Key Design Decisions
 
-- **No database**: Storage is filesystem-based — the generated HTML tree _is_ the data store, with SHA1 files as the package cache. Search uses an in-memory filename index built at startup by scanning the HTML tree; no external search engine or database is needed.
+- **No database**: Storage is filesystem-based — the generated HTML tree _is_ the data store, with checksum files as the package cache. Search uses an in-memory filename index built at startup by scanning the HTML tree; no external search engine or database is needed.
 - **Two-service model**: The server runs continuously; the ingestion process runs once and exits. Pebble's `on-success: ignore` prevents the charm from restarting it after completion.
 - **mandoc for conversion**: The `mandoc` utility converts roff to HTML. It's installed as a stage package in the rock.
 - **8-stage HTML pipeline**: Raw `mandoc` output is transformed through multiple stages to produce web-ready HTML with proper links, TOC, metadata, and structure.
