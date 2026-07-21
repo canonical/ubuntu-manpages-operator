@@ -22,7 +22,11 @@ type Package struct {
 	Name     string
 	Version  string
 	Filename string
-	SHA1     string
+	// Hash is a checksum fingerprint used to detect package changes for
+	// caching purposes. It is populated from whichever checksum field the
+	// archive publishes (archives don't always publish all of them; e.g.
+	// some releases only publish SHA512).
+	Hash string
 }
 
 type Fetcher struct {
@@ -317,7 +321,23 @@ func parsePackages(reader io.Reader) ([]Package, error) {
 	var results []Package
 
 	flush := func() {
-		if fields["Package"] == "" || fields["Filename"] == "" || fields["SHA1"] == "" {
+		// Prefer the strongest checksum available, falling back to
+		// weaker ones: some releases only publish a subset of checksum
+		// fields (e.g. SHA512 only). The hash is only ever used as an
+		// opaque change-detection fingerprint, but preferring the
+		// strongest available one minimises the (already tiny) risk of
+		// collisions masking a real package change.
+		hash := fields["SHA512"]
+		if hash == "" {
+			hash = fields["SHA256"]
+		}
+		if hash == "" {
+			hash = fields["SHA1"]
+		}
+		if hash == "" {
+			hash = fields["MD5sum"]
+		}
+		if fields["Package"] == "" || fields["Filename"] == "" || hash == "" {
 			fields = map[string]string{}
 			return
 		}
@@ -325,7 +345,7 @@ func parsePackages(reader io.Reader) ([]Package, error) {
 			Name:     fields["Package"],
 			Version:  fields["Version"],
 			Filename: fields["Filename"],
-			SHA1:     fields["SHA1"],
+			Hash:     hash,
 		})
 		fields = map[string]string{}
 	}
@@ -342,7 +362,7 @@ func parsePackages(reader io.Reader) ([]Package, error) {
 		}
 		key, value := parts[0], parts[1]
 		switch key {
-		case "Package", "Version", "Filename", "SHA1":
+		case "Package", "Version", "Filename", "SHA1", "SHA256", "SHA512", "MD5sum":
 			fields[key] = value
 		}
 	}

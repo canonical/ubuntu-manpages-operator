@@ -34,11 +34,11 @@ All three binaries read configuration from environment variables, optionally loa
 | `MANPAGES_ADDR`            | `:8080`                                                  | HTTP bind address (server only)                        |
 | `MANPAGES_ADMIN_ADDR`      | `127.0.0.1:9090`                                         | Admin listener address for internal endpoints; must be loopback-only (server only) |
 | `MANPAGES_LOG_LEVEL`       | `info`                                                   | Log level (debug, info, warn, error)                   |
-| `MANPAGES_FORCE`           | `false`                                                  | Force reprocessing of all packages (ignore SHA1 cache) |
+| `MANPAGES_FORCE`           | `false`                                                  | Force reprocessing of all packages (ignore checksum cache) |
 
 ### Ingest pipeline
 
-For each configured release (processed concurrently), the ingest binary fetches `Packages.gz` index files from the Ubuntu archive, deduplicates packages by highest version, and downloads each `.deb` that has changed since the last run (based on a SHA1 cache). Manpages are extracted from each package, converted from roff to HTML using `mandoc`, and run through an 8-stage HTML transform pipeline that rewrites links, extracts titles, generates a table of contents, and injects metadata. Finally, sitemaps are generated per release and section.
+For each configured release (processed concurrently), the ingest binary fetches `Packages.gz` index files from the Ubuntu archive, deduplicates packages by highest version, and downloads each `.deb` that has changed since the last run (based on a per-package checksum cache, using whichever checksum field—SHA256, SHA1, SHA512, or MD5sum—the archive publishes). Manpages are extracted from each package, converted from roff to HTML using `mandoc`, and run through an 8-stage HTML transform pipeline that rewrites links, extracts titles, generates a table of contents, and injects metadata. Finally, sitemaps are generated per release and section.
 
 ### Web server
 
@@ -46,7 +46,7 @@ The server binary serves the generated HTML manpages along with search, browse, 
 
 ### Key design decisions
 
-- **No database** — Both storage and search are filesystem-based. The generated HTML tree _is_ the data store, with SHA1 files as the package cache.
+- **No database** — Both storage and search are filesystem-based. The generated HTML tree _is_ the data store, with checksum files as the package cache.
 - **Fuzzy search** — Search matches in four tiers: exact, prefix, substring (contains), and fuzzy (Damerau-Levenshtein distance). Fuzzy results are shown in a separate "Similar matches" section so typos like `grpe` still find `grep`. The JSON API exposes the `match_type` field on each result.
 - **mandoc for conversion** — The `mandoc` utility converts roff to HTML. It is installed as a stage package in the OCI image.
 - **Metadata in HTML comments** — Each generated manpage embeds a `<!--META:{...}-->` JSON comment containing title, description, package info, and TOC. The server parses this at serve time for rendering and search enrichment.
