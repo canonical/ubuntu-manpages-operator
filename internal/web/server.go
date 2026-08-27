@@ -69,6 +69,7 @@ type manpageView struct {
 	GzipName     string
 	SiteURL      string
 	CanonicalURL string
+	PlainTextURL string
 	JSONLD       template.HTML
 }
 
@@ -961,6 +962,9 @@ func (s *Server) serveManpage(w http.ResponseWriter, r *http.Request, fsPath str
 
 	// Build path suffix, breadcrumbs, and gzip link from the URL.
 	clean := filepath.Clean(r.URL.Path)
+	if strings.HasSuffix(clean, ".html") {
+		view.PlainTextURL = s.basePath + strings.TrimSuffix(clean, ".html") + ".txt"
+	}
 	segments := strings.Split(strings.Trim(clean, "/"), "/")
 	// segments: [manpages, {release}, man{N}, file.html]
 	if len(segments) >= 3 {
@@ -1078,44 +1082,49 @@ func (s *Server) handleLlmsTxt(w http.ResponseWriter, _ *http.Request) {
 
 This site provides web-accessible Unix/Linux manual pages (manpages) extracted from Ubuntu packages.
 
-## Content Structure
+Individual HTML manpages use the pattern %[2]c%[1]s/manpages/{release}/man{section}/{name}.{section}.html%[2]c. Change the %[2]c.html%[2]c suffix to %[2]c.txt%[2]c for an LLM-friendly plain-text representation. Placeholders in these patterns are documentation and are not literal URLs.
 
-- %[1]s/manpages/{release}/man{section}/{name}.{section}.html — Individual manpage
-- %[1]s/manpages/{release}/ — Browse manpages by release
-- %[1]s/search?q={query} — Search across all manpages
+The search API uses %[2]c%[1]s/api/search?q={query}&release={release}&lang={lang}&limit={n}&offset={n}%[2]c and returns JSON with %[2]ctotal%[2]c and %[2]cresults%[2]c fields. Each result includes %[2]ctitle%[2]c, %[2]cpath%[2]c, %[2]cdistro%[2]c, %[2]csection%[2]c, and %[2]cmatch_type%[2]c; matches are ranked exact, prefix, contains, then fuzzy.
 
-## Plain Text
-
-Append .txt to any manpage URL for plain text output suitable for LLM consumption:
-- %[1]s/manpages/{release}/man{section}/{name}.{section}.txt
-
-## Releases
-
-`, siteURL)
+Supported releases:
+`, siteURL, '`')
 
 	for _, key := range s.cfg.ReleaseKeys() {
-		_, _ = fmt.Fprintf(w, "- %s (%s)\n", key, s.cfg.ReleaseVersions[key])
+		_, _ = fmt.Fprintf(w, "- `%s` (%s)\n", key, s.cfg.ReleaseVersions[key])
 	}
 
 	_, _ = fmt.Fprintf(w, `
-## Man Sections
+Manpage sections:
 
-- man1: User commands
-- man2: System calls
-- man3: Library functions
-- man4: Special files
-- man5: File formats
-- man6: Games
-- man7: Miscellaneous
-- man8: System administration
-- man9: Kernel routines
+- %[2]cman1%[2]c: User commands
+- %[2]cman2%[2]c: System calls
+- %[2]cman3%[2]c: Library functions
+- %[2]cman4%[2]c: Special files
+- %[2]cman5%[2]c: File formats
+- %[2]cman6%[2]c: Games
+- %[2]cman7%[2]c: Miscellaneous
+- %[2]cman8%[2]c: System administration
+- %[2]cman9%[2]c: Kernel routines
 
-## API
+## Entry points
 
-- GET %[1]s/api/search?q={query}&release={release}&lang={lang}&limit={n}&offset={n}
-  Returns JSON with fields: total, results (array of {title, path, distro, section, match_type})
-  match_type is one of: exact, prefix, contains, fuzzy (Damerau-Levenshtein)
-  Results are ranked: exact > prefix > contains > fuzzy
+- [Browse Ubuntu manpages](%[1]s/manpages/): Browse supported releases and sections
+- [Search Ubuntu manpages](%[1]s/search?q=ls): Search for commands and topics
+- [Search API example](%[1]s/api/search?q=ls&limit=20): JSON search results
+`, siteURL, '`')
+
+	exampleRelease := s.cfg.LatestLTSRelease()
+	if exampleRelease == "" {
+		exampleRelease = s.cfg.LatestRelease()
+	}
+	if exampleRelease != "" {
+		_, _ = fmt.Fprintf(w, "- [Example plain-text manpage](%s/manpages/%s/man1/ls.1.txt): LLM-friendly text for ls(1)\n", siteURL, exampleRelease)
+	}
+
+	_, _ = fmt.Fprintf(w, `
+## Optional
+
+- [Full service documentation](%[1]s/llms-full.txt): Detailed URL, API, and ranking documentation
 `, siteURL)
 }
 

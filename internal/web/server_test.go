@@ -11,6 +11,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -88,7 +89,9 @@ func TestHandleRobotsTxt(t *testing.T) {
 }
 
 func TestHandleLlmsTxt(t *testing.T) {
-	srv, _ := testServer(t)
+	srv, cfg := testServer(t)
+	cfg.Releases = append(cfg.Releases, "jammy")
+	cfg.ReleaseVersions["jammy"] = "22.04"
 
 	req := httptest.NewRequest(http.MethodGet, "/llms.txt", nil)
 	w := httptest.NewRecorder()
@@ -101,11 +104,16 @@ func TestHandleLlmsTxt(t *testing.T) {
 	if resp.Header.Get("Content-Type") != "text/plain; charset=utf-8" {
 		t.Errorf("unexpected content type: %s", resp.Header.Get("Content-Type"))
 	}
-	if !strings.Contains(text, "# Ubuntu Manpages") {
+	if strings.Count(text, "# Ubuntu Manpages") != 1 {
 		t.Error("missing title")
 	}
-	if !strings.Contains(text, "noble (24.04)") {
-		t.Error("missing release listing")
+	if !strings.Contains(text, "> A repository of hundreds of thousands of manpages") {
+		t.Error("missing summary blockquote")
+	}
+	for _, release := range []string{"`jammy` (22.04)", "`noble` (24.04)"} {
+		if !strings.Contains(text, release) {
+			t.Errorf("missing dynamically configured release %q", release)
+		}
 	}
 	if !strings.Contains(text, "/api/search") {
 		t.Error("missing API documentation")
@@ -115,6 +123,87 @@ func TestHandleLlmsTxt(t *testing.T) {
 	}
 	if !strings.Contains(text, "match_type") {
 		t.Error("missing match_type documentation")
+	}
+	if !strings.Contains(text, "`https://manpages.ubuntu.com/manpages/{release}/man{section}/{name}.{section}.html`") {
+		t.Error("missing documented manpage URL pattern")
+	}
+	for _, link := range []string{
+		"[Browse Ubuntu manpages](" + cfg.SiteURL() + "/manpages/)",
+		"[Search Ubuntu manpages](" + cfg.SiteURL() + "/search?q=ls)",
+		"[Search API example](" + cfg.SiteURL() + "/api/search?q=ls&limit=20)",
+		"[Example plain-text manpage](" + cfg.SiteURL() + "/manpages/noble/man1/ls.1.txt)",
+		"[Full service documentation](" + cfg.SiteURL() + "/llms-full.txt)",
+	} {
+		if !strings.Contains(text, link) {
+			t.Errorf("missing concrete configured link %q", link)
+		}
+	}
+
+	linkPattern := regexp.MustCompile(`^- \[[^]]+\]\(([^)]+)\)(?:: .+)?$`)
+	inFileList := false
+	for lineNumber, line := range strings.Split(text, "\n") {
+		if strings.HasPrefix(line, "## ") {
+			inFileList = true
+			continue
+		}
+		if !inFileList || line == "" {
+			continue
+		}
+		match := linkPattern.FindStringSubmatch(line)
+		if match == nil {
+			t.Errorf("line %d beneath an H2 is not a Markdown link-list entry: %q", lineNumber+1, line)
+			continue
+		}
+		if !strings.HasPrefix(match[1], cfg.SiteURL()+"/") {
+			t.Errorf("file-list URL does not use configured site URL: %q", match[1])
+		}
+		if strings.ContainsAny(match[1], "{}") {
+			t.Errorf("file-list URL contains an unresolved placeholder: %q", match[1])
+		}
+	}
+	if strings.Contains(text, "- https://") {
+		t.Error("found bare URL list entry")
+	}
+}
+
+func TestLlmsTxtFileListLinksResolve(t *testing.T) {
+	srv, cfg := testServer(t)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/llms.txt", srv.handleLlmsTxt)
+	mux.HandleFunc("/llms-full.txt", srv.handleLlmsFullTxt)
+	mux.HandleFunc("/api/search", srv.handleSearch)
+	mux.HandleFunc("/search", srv.handleSearchPage)
+	mux.HandleFunc("/manpages/", srv.handleManpages)
+	mux.HandleFunc("/", srv.handleIndex)
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+	cfg.Site = ts.URL
+
+	resp, err := ts.Client().Get(ts.URL + "/llms.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, err := io.ReadAll(resp.Body)
+	_ = resp.Body.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	linkPattern := regexp.MustCompile(`^- \[[^]]+\]\(([^)]+)\)(?:: .+)?$`)
+	for _, line := range strings.Split(string(body), "\n") {
+		match := linkPattern.FindStringSubmatch(line)
+		if match == nil {
+			continue
+		}
+		linkResp, err := ts.Client().Get(match[1])
+		if err != nil {
+			t.Errorf("GET %s: %v", match[1], err)
+			continue
+		}
+		_ = linkResp.Body.Close()
+		if linkResp.StatusCode < 200 || linkResp.StatusCode >= 300 {
+			t.Errorf("GET %s returned %d", match[1], linkResp.StatusCode)
+		}
 	}
 }
 
@@ -175,8 +264,8 @@ func TestServeManpageText(t *testing.T) {
 	if resp.Header.Get("Content-Type") != "text/plain; charset=utf-8" {
 		t.Errorf("unexpected content type: %s", resp.Header.Get("Content-Type"))
 	}
-	if strings.Contains(text, "<h2>") {
-		t.Error("plain text output still contains HTML tags")
+	if strings.ContainsAny(text, "<>") {
+		t.Error("plain text output still contains HTML markup")
 	}
 	if !strings.Contains(text, "list directory contents") {
 		t.Error("expected manpage content in plain text")
@@ -1030,6 +1119,83 @@ func TestHandleIndexRendersLandingPage(t *testing.T) {
 	// Must NOT contain docs layout markers.
 	if strings.Contains(html, "l-docs__sidebar") {
 		t.Error("landing page should not use the docs sidebar layout")
+	}
+}
+
+func TestHTMLDiscoveryMetadata(t *testing.T) {
+	srv, _ := testServer(t)
+
+	tests := []struct {
+		name          string
+		path          string
+		handle        func(http.ResponseWriter, *http.Request)
+		wantAlternate string
+		wantCanonical string
+	}{
+		{name: "homepage", path: "/", handle: srv.handleIndex},
+		{name: "search", path: "/search?q=ls", handle: srv.handleSearchPage},
+		{
+			name:          "browse",
+			path:          "/manpages/noble/",
+			handle:        srv.handleManpages,
+			wantCanonical: `<link rel="canonical" href="https://manpages.ubuntu.com/manpages/noble" />`,
+		},
+		{
+			name:          "manpage",
+			path:          "/manpages/noble/man1/ls.1.html",
+			handle:        srv.handleManpages,
+			wantAlternate: `<link rel="alternate" type="text/plain" href="/manpages/noble/man1/ls.1.txt" />`,
+			wantCanonical: `<link rel="canonical" href="https://manpages.ubuntu.com/manpages/noble/man1/ls.1.html" />`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, tt.path, nil)
+			w := httptest.NewRecorder()
+			tt.handle(w, req)
+
+			resp := w.Result()
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				t.Fatal(err)
+			}
+			html := string(body)
+			if resp.StatusCode != http.StatusOK {
+				t.Fatalf("expected 200, got %d", resp.StatusCode)
+			}
+			if got := strings.Count(html, `<link rel="describedby" href="/llms.txt" />`); got != 1 {
+				t.Errorf("describedby link count = %d, want 1", got)
+			}
+			if tt.wantAlternate == "" {
+				if strings.Contains(html, `rel="alternate"`) {
+					t.Error("page has a meaningless alternate link")
+				}
+			} else if got := strings.Count(html, tt.wantAlternate); got != 1 {
+				t.Errorf("plain-text alternate link count = %d, want 1", got)
+			}
+			if tt.wantCanonical != "" && !strings.Contains(html, tt.wantCanonical) {
+				t.Errorf("missing existing canonical metadata %q", tt.wantCanonical)
+			}
+		})
+	}
+}
+
+func TestHTMLDiscoveryUsesBasePath(t *testing.T) {
+	_, cfg := testServer(t)
+	cfg.Site = "https://example.com/docs"
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	srv := NewServer(cfg, logger)
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	w := httptest.NewRecorder()
+	srv.handleIndex(w, req)
+	body, err := io.ReadAll(w.Result().Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.Count(string(body), `<link rel="describedby" href="/docs/llms.txt" />`); got != 1 {
+		t.Errorf("base-path describedby link count = %d, want 1", got)
 	}
 }
 

@@ -3,6 +3,7 @@
 {{ define "head-meta" }}
     {{ if .Description }}<meta name="description" content="{{ .Description }}" />{{ end }}
     <link rel="canonical" href="{{ .CanonicalURL }}" />
+    {{ if .PlainTextURL }}<link rel="alternate" type="text/plain" href="{{ .PlainTextURL }}" />{{ end }}
     <meta property="og:title" content="{{ .Title }}" />
     {{ if .Description }}<meta property="og:description" content="{{ .Description }}" />{{ end }}
     <meta property="og:url" content="{{ .CanonicalURL }}" />
