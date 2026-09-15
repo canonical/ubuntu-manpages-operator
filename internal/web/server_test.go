@@ -127,6 +127,10 @@ func TestHandleLlmsTxt(t *testing.T) {
 	if !strings.Contains(text, "`https://manpages.ubuntu.com/manpages/{release}/man{section}/{name}.{section}.html`") {
 		t.Error("missing documented manpage URL pattern")
 	}
+	if !strings.Contains(text, "`https://manpages.ubuntu.com/bash`") ||
+		!strings.Contains(text, "`https://manpages.ubuntu.com/sed.1posix`") {
+		t.Error("missing documented latest-release shortcuts")
+	}
 	for _, link := range []string{
 		"[Browse Ubuntu manpages](" + cfg.SiteURL() + "/manpages/)",
 		"[Search Ubuntu manpages](" + cfg.SiteURL() + "/search?q=ls)",
@@ -229,6 +233,10 @@ func TestHandleLlmsFullTxt(t *testing.T) {
 	}
 	if !strings.Contains(text, "Search Ranking") {
 		t.Error("missing search ranking section")
+	}
+	if !strings.Contains(text, "Latest-release shortcut: https://manpages.ubuntu.com/{name}") ||
+		!strings.Contains(text, "https://manpages.ubuntu.com/sed.1posix") {
+		t.Error("missing documented latest-release shortcut")
 	}
 	if !strings.Contains(text, "match_type") {
 		t.Error("missing match_type in response format")
@@ -1119,6 +1127,96 @@ func TestHandleIndexRendersLandingPage(t *testing.T) {
 	// Must NOT contain docs layout markers.
 	if strings.Contains(html, "l-docs__sidebar") {
 		t.Error("landing page should not use the docs sidebar layout")
+	}
+}
+
+func TestHandleIndexShortManpageRedirect(t *testing.T) {
+	srv, cfg := testServer(t)
+	manDir := filepath.Join(cfg.PublicHTMLDir, "manpages", "noble", "man1")
+	fragment := `<!--META:{"title":"sed","description":"stream editor"}-->` + "\n" + `<p>content</p>`
+	if err := os.WriteFile(filepath.Join(manDir, "sed.1posix.html"), []byte(fragment), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	srv.search.Rebuild()
+
+	tests := []struct {
+		name       string
+		path       string
+		wantStatus int
+		wantLoc    string
+	}{
+		{name: "bare command", path: "/ls", wantStatus: http.StatusFound, wantLoc: "/manpages/noble/man1/ls.1.html"},
+		{name: "case insensitive", path: "/LS", wantStatus: http.StatusFound, wantLoc: "/manpages/noble/man1/ls.1.html"},
+		{name: "qualified section", path: "/sed.1posix", wantStatus: http.StatusFound, wantLoc: "/manpages/noble/man1/sed.1posix.html"},
+		{name: "unknown command", path: "/does-not-exist", wantStatus: http.StatusNotFound},
+		{name: "nested path", path: "/ls/extra", wantStatus: http.StatusNotFound},
+		{name: "trailing slash", path: "/ls/", wantStatus: http.StatusNotFound},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, tt.path, nil)
+			w := httptest.NewRecorder()
+			srv.handleIndex(w, req)
+
+			resp := w.Result()
+			if resp.StatusCode != tt.wantStatus {
+				t.Fatalf("status = %d, want %d", resp.StatusCode, tt.wantStatus)
+			}
+			if loc := resp.Header.Get("Location"); loc != tt.wantLoc {
+				t.Errorf("Location = %q, want %q", loc, tt.wantLoc)
+			}
+		})
+	}
+}
+
+func TestHandleIndexShortManpageUsesLatestRelease(t *testing.T) {
+	srv, cfg := testServer(t)
+	cfg.Releases = append(cfg.Releases, "questing")
+	cfg.ReleaseVersions["questing"] = "25.10"
+
+	// Recreate the searcher with both releases. The manpage exists only in
+	// noble, so a latest-release lookup must not fall back to the older copy.
+	srv.search = search.NewFSSearcher(cfg.PublicHTMLDir, cfg.ReleaseKeys())
+	req := httptest.NewRequest(http.MethodGet, "/ls", nil)
+	w := httptest.NewRecorder()
+	srv.handleIndex(w, req)
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusNotFound)
+	}
+
+	questingDir := filepath.Join(cfg.PublicHTMLDir, "manpages", "questing", "man1")
+	if err := os.MkdirAll(questingDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(questingDir, "ls.1.html"), []byte(`<p>content</p>`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	srv.search.Rebuild()
+
+	w = httptest.NewRecorder()
+	srv.handleIndex(w, req)
+	if w.Code != http.StatusFound {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusFound)
+	}
+	if loc := w.Header().Get("Location"); loc != "/manpages/questing/man1/ls.1.html" {
+		t.Errorf("Location = %q, want questing manpage", loc)
+	}
+}
+
+func TestHandleIndexShortManpagePreservesBasePath(t *testing.T) {
+	srv, _ := testServer(t)
+	srv.basePath = "/docs"
+
+	req := httptest.NewRequest(http.MethodGet, "/ls", nil)
+	w := httptest.NewRecorder()
+	srv.handleIndex(w, req)
+
+	if w.Code != http.StatusFound {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusFound)
+	}
+	if loc := w.Header().Get("Location"); loc != "/docs/manpages/noble/man1/ls.1.html" {
+		t.Errorf("Location = %q, want base-path-prefixed manpage", loc)
 	}
 }
 

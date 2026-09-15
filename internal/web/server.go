@@ -398,6 +398,16 @@ func groupSearchResults(results []search.Result, releases []indexRelease, basePa
 
 func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" && r.URL.Path != "/index.html" {
+		// Restore release-agnostic short URLs such as /bash and
+		// /sed.1posix. Only a single path segment is eligible so this
+		// catch-all cannot reinterpret unknown nested routes.
+		reference := strings.TrimPrefix(r.URL.Path, "/")
+		if reference != "" && !strings.Contains(reference, "/") && s.search != nil {
+			if result, ok := s.search.Lookup(reference, s.cfg.LatestRelease()); ok {
+				http.Redirect(w, r, s.basePath+result.Path, http.StatusFound)
+				return
+			}
+		}
 		s.renderNotFound(w, r)
 		return
 	}
@@ -1082,7 +1092,7 @@ func (s *Server) handleLlmsTxt(w http.ResponseWriter, _ *http.Request) {
 
 This site provides web-accessible Unix/Linux manual pages (manpages) extracted from Ubuntu packages.
 
-Individual HTML manpages use the pattern %[2]c%[1]s/manpages/{release}/man{section}/{name}.{section}.html%[2]c. Change the %[2]c.html%[2]c suffix to %[2]c.txt%[2]c for an LLM-friendly plain-text representation. Placeholders in these patterns are documentation and are not literal URLs.
+Individual HTML manpages use the pattern %[2]c%[1]s/manpages/{release}/man{section}/{name}.{section}.html%[2]c. Release-agnostic shortcuts such as %[2]c%[1]s/bash%[2]c and section-qualified shortcuts such as %[2]c%[1]s/sed.1posix%[2]c redirect to an exact match in the latest release. Change the %[2]c.html%[2]c suffix on a canonical manpage URL to %[2]c.txt%[2]c for an LLM-friendly plain-text representation. Placeholders in these patterns are documentation and are not literal URLs.
 
 The search API uses %[2]c%[1]s/api/search?q={query}&release={release}&lang={lang}&limit={n}&offset={n}%[2]c and returns JSON with %[2]ctotal%[2]c and %[2]cresults%[2]c fields. Each result includes %[2]ctitle%[2]c, %[2]cpath%[2]c, %[2]cdistro%[2]c, %[2]csection%[2]c, and %[2]cmatch_type%[2]c; matches are ranked exact, prefix, contains, then fuzzy.
 
@@ -1141,6 +1151,7 @@ This site provides web-accessible Unix/Linux manual pages (manpages) extracted f
 ## Content Structure
 
 Individual manpage: %[1]s/manpages/{release}/man{section}/{name}.{section}.html
+Latest-release shortcut: %[1]s/{name} or %[1]s/{name}.{section}[suffix] (for example, %[1]s/sed.1posix)
 Browse by release:  %[1]s/manpages/{release}/
 Browse by section:  %[1]s/manpages/{release}/man{section}/
 Homepage:           %[1]s/

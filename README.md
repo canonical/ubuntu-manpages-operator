@@ -42,7 +42,7 @@ For each configured release (processed concurrently), the ingest binary fetches 
 
 ### Web server
 
-The server binary serves the generated HTML manpages along with search, browse, sitemaps, health checks, and static assets. It supports virtual release aliases (`latest`, `lts`) resolved via the Launchpad API, as well as plain-text and gzipped manpage variants. Route registration lives in [`internal/web/server.go`](internal/web/server.go).
+The server binary serves the generated HTML manpages along with search, browse, sitemaps, health checks, and static assets. It supports virtual release aliases (`latest`, `lts`) resolved via the Launchpad API, release-agnostic shortcuts such as `/bash` and `/sed.1posix` that redirect to an exact match in the latest release, and plain-text and gzipped manpage variants. Route registration lives in [`internal/web/server.go`](internal/web/server.go).
 
 ### Key design decisions
 
