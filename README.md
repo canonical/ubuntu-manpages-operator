@@ -42,7 +42,7 @@ For each configured release (processed concurrently), the ingest binary fetches 
 
 ### Web server
 
-The server binary serves the generated HTML manpages along with search, browse, sitemaps, health checks, and static assets. It supports virtual release aliases (`latest`, `lts`) resolved via the Launchpad API, as well as plain-text and gzipped manpage variants. See the [routes table](.github/copilot-instructions.md#web-server-routes) for the full list of endpoints.
+The server binary serves the generated HTML manpages along with search, browse, sitemaps, health checks, and static assets. It supports virtual release aliases (`latest`, `lts`) resolved via the Launchpad API, as well as plain-text and gzipped manpage variants. Route registration lives in [`internal/web/server.go`](internal/web/server.go).
 
 ### Key design decisions
 
