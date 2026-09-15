@@ -55,6 +55,74 @@ func TestFSSearcher_ExactMatch(t *testing.T) {
 	}
 }
 
+func TestFSSearcher_Lookup(t *testing.T) {
+	root := t.TempDir()
+	writeManpage(t, root, "noble", "", 1, "sed.1posix.html", "sed", "POSIX stream editor")
+	writeManpage(t, root, "noble", "", 1, "sed.1.html", "sed", "stream editor")
+	writeManpage(t, root, "noble", "", 8, "sed.8.html", "sed", "administrative stream editor")
+	writeManpage(t, root, "noble", "", 1, "awk.1posix.html", "awk", "POSIX pattern scanning")
+	writeManpage(t, root, "noble", "", 1, "example.1.1.html", "example.1", "dotted command name")
+	writeManpage(t, root, "noble", "", 3, "SSL_connect.3ssl.html", "SSL_connect", "TLS connection")
+
+	s := NewFSSearcher(root, []string{"noble"})
+
+	tests := []struct {
+		name      string
+		reference string
+		distro    string
+		wantPath  string
+		wantFound bool
+	}{
+		{
+			name:      "bare name prefers lowest section and filename",
+			reference: "sed",
+			distro:    "noble",
+			wantPath:  "/manpages/noble/man1/sed.1.html",
+			wantFound: true,
+		},
+		{
+			name:      "qualified stem selects suffixed section",
+			reference: "sed.1posix",
+			distro:    "noble",
+			wantPath:  "/manpages/noble/man1/sed.1posix.html",
+			wantFound: true,
+		},
+		{name: "qualified stem does not select suffixed sibling", reference: "awk.1", distro: "noble"},
+		{
+			name:      "lookup is case insensitive",
+			reference: "ssl_CONNECT.3SSL",
+			distro:    "noble",
+			wantPath:  "/manpages/noble/man3/SSL_connect.3ssl.html",
+			wantFound: true,
+		},
+		{
+			name:      "dotted bare command falls back after stem lookup",
+			reference: "example.1",
+			distro:    "noble",
+			wantPath:  "/manpages/noble/man1/example.1.1.html",
+			wantFound: true,
+		},
+		{name: "missing reference", reference: "missing", distro: "noble"},
+		{name: "unknown release", reference: "sed", distro: "jammy"},
+		{name: "empty reference", reference: "", distro: "noble"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, found := s.Lookup(tt.reference, tt.distro)
+			if found != tt.wantFound {
+				t.Fatalf("Lookup() found = %v, want %v", found, tt.wantFound)
+			}
+			if result.Path != tt.wantPath {
+				t.Errorf("Lookup() path = %q, want %q", result.Path, tt.wantPath)
+			}
+			if found && result.MatchType != MatchExact {
+				t.Errorf("Lookup() match type = %q, want %q", result.MatchType, MatchExact)
+			}
+		})
+	}
+}
+
 func TestFSSearcher_PrefixMatch(t *testing.T) {
 	root := t.TempDir()
 	writeManpage(t, root, "noble", "", 1, "ls.1.html", "ls", "list directory contents")

@@ -9,6 +9,7 @@ import (
 // search implementation.
 type Searcher interface {
 	Search(ctx context.Context, query, distro, language string, limit, offset int) (SearchResponse, error)
+	Lookup(reference, distro string) (Result, bool)
 	Rebuild()
 	Close() error
 }

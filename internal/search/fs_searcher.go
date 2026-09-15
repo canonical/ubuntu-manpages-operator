@@ -29,7 +29,7 @@ type FSSearcher struct {
 	releases []string
 
 	mu    sync.RWMutex
-	index map[string][]indexEntry // release → entries (default language only)
+	index map[string][]indexEntry // release → entries sorted by command, section, filename
 }
 
 // NewFSSearcher creates a new filesystem-based searcher and eagerly builds
@@ -74,6 +74,15 @@ func (s *FSSearcher) buildIndex() map[string][]indexEntry {
 				})
 			}
 		}
+		sort.Slice(entries, func(i, j int) bool {
+			if entries[i].lower != entries[j].lower {
+				return entries[i].lower < entries[j].lower
+			}
+			if entries[i].section != entries[j].section {
+				return entries[i].section < entries[j].section
+			}
+			return entries[i].filename < entries[j].filename
+		})
 		idx[rel] = entries
 	}
 
@@ -204,6 +213,65 @@ func (s *FSSearcher) Search(ctx context.Context, query, distro, language string,
 	}
 
 	return s.assembleResults(buckets, limit, offset)
+}
+
+// Lookup resolves an exact manpage reference within a single release. A
+// complete filename stem such as "sed.1posix" takes precedence over a bare
+// command-name match such as "sed". Bare-name ties are resolved by the lowest
+// section number and then by filename.
+func (s *FSSearcher) Lookup(reference, distro string) (Result, bool) {
+	reference = strings.TrimSpace(reference)
+	if reference == "" || distro == "" {
+		return Result{}, false
+	}
+	referenceLower := strings.ToLower(reference)
+
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	entries, ok := s.index[distro]
+	if !ok {
+		return Result{}, false
+	}
+
+	// A qualified reference identifies both a command and a complete filename
+	// stem. Use the command portion to narrow the sorted index, then compare the
+	// full stem so sed.1 cannot accidentally select sed.1posix.
+	commandLower := strings.ToLower(commandName(reference + ".html"))
+	start, end := lookupRange(entries, commandLower)
+	for _, entry := range entries[start:end] {
+		stem := strings.TrimSuffix(entry.filename, ".html")
+		if strings.EqualFold(stem, reference) {
+			return lookupResult(distro, entry), true
+		}
+	}
+
+	// If the reference itself is a command name, the first entry in its range
+	// is deterministic because the index is ordered by section and filename.
+	start, end = lookupRange(entries, referenceLower)
+	if start == end {
+		return Result{}, false
+	}
+	return lookupResult(distro, entries[start]), true
+}
+
+func lookupRange(entries []indexEntry, commandLower string) (int, int) {
+	start := sort.Search(len(entries), func(i int) bool {
+		return entries[i].lower >= commandLower
+	})
+	end := sort.Search(len(entries), func(i int) bool {
+		return entries[i].lower > commandLower
+	})
+	return start, end
+}
+
+func lookupResult(distro string, entry indexEntry) Result {
+	return Result{
+		Path:      urlPath(distro, "", entry.section, entry.filename),
+		Distro:    distro,
+		Section:   entry.section,
+		MatchType: MatchExact,
+	}
 }
 
 // searchFilesystem performs a search by scanning the filesystem directly.
