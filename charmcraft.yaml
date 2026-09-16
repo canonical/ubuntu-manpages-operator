@@ -20,6 +20,7 @@ links:
     - https://github.com/canonical/ubuntu-manpages-operator
 
 type: charm
+charm-user: non-root
 base: ubuntu@24.04
 platforms:
   amd64:
@@ -50,6 +51,8 @@ parts:
 containers:
   manpages:
     resource: manpages-image
+    uid: 584792
+    gid: 584792
     mounts:
       - storage: manpages
         location: /app/www/manpages
@@ -60,7 +63,8 @@ resources:
   manpages-image:
     type: oci-image
     description: OCI image for manpages service
-    # Included for simplicity in integration tests
+    # Published image; source deployments need the rebuilt non-root resource.
+    # Override integration tests with --manpages-image when testing the new rock.
     upstream-source: ghcr.io/canonical/ubuntu-manpages-operator:0.4.0
 
 charm-libs:

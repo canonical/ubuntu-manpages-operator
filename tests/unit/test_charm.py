@@ -7,9 +7,11 @@ These tests only cover those methods that do not require internet access,
 and do not attempt to manipulate the underlying machine.
 """
 
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+import yaml
 from ops import BlockedStatus
 from ops.pebble import CheckLevel, CheckStatus, Layer, ServiceStatus
 from ops.testing import ActiveStatus, CheckInfo, Context, MaintenanceStatus, State, TCPPort
@@ -17,6 +19,14 @@ from scenario import Container
 
 from charm import ManpagesCharm
 from manpages import Manpages
+
+
+def test_non_root_metadata():
+    """The charm and its workload must declare non-root identities."""
+    metadata = yaml.safe_load(Path("charmcraft.yaml").read_text())
+    assert metadata["charm-user"] == "non-root"
+    assert metadata["containers"]["manpages"]["uid"] == 584792
+    assert metadata["containers"]["manpages"]["gid"] == 584792
 
 
 @pytest.fixture

@@ -111,6 +111,12 @@ The scenario described above is demonstrated [in the integration tests](./tests/
 
 ### Deployment requirements
 
+The charm runs without root privileges. Its workload runs as UID/GID `584792`
+(`_daemon_`), and the locally built rock provides writable data directories under
+`/app/www`. Use the rebuilt rock when deploying this source charm; the existing
+`0.4.0` upstream image does not provide these directories. Storage mounted at
+`/app/www/manpages` and `/app/www/manpages.gz` must also be writable by this identity.
+
 As of 2025-07-30, the deployment requirements have been observed to be the following:
 
 - Configured releases: Jammy, Noble, Plucky, Questing
