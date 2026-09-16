@@ -40,7 +40,10 @@ def manpages_charm(request):
 
 
 @fixture(scope="module")
-def manpages_oci_image():
+def manpages_oci_image(request):
+    image = request.config.getoption("--manpages-image")
+    if image:
+        return image
     meta = yaml.safe_load(Path("./charmcraft.yaml").read_text())
     return meta["resources"]["manpages-image"]["upstream-source"]
 

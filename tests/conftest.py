@@ -6,3 +6,7 @@ def pytest_addoption(parser: Parser):
         "--charm-path",
         help="Pre-built charm file to deploy, rather than building from source",
     )
+    parser.addoption(
+        "--manpages-image",
+        help="Rebuilt workload image accessible to the Juju model",
+    )
