@@ -77,6 +77,18 @@ go test ./...
 rockcraft pack
 ```
 
+Load the resulting rock into local Docker and check its non-root identity and
+data-directory permissions without publishing an image:
+
+```bash
+sudo rockcraft.skopeo --insecure-policy copy \
+  oci-archive:ubuntu-manpages_0.4.0_amd64.rock docker-daemon:ubuntu-manpages:non-root
+make rock-test
+```
+
+Set `MANPAGES_TEST_IMAGE` to test a different local image tag. The image checks are
+separate from unit tests and Juju integration tests.
+
 ## Charm development (Python)
 
 This project uses [`uv`](https://github.com/astral-sh/uv) for managing dependencies and virtual

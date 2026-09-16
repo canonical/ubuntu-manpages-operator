@@ -27,6 +27,7 @@ unit:
 		--source=$(SRC) \
 		-m pytest \
 		--ignore=$(TESTS)/integration \
+		--ignore=$(TESTS)/rock \
 		--tb native \
 		-v \
 		-s \
@@ -41,8 +42,12 @@ integration:
 		-s \
 		--tb native \
 		--ignore=$(TESTS)/unit \
+		--ignore=$(TESTS)/rock \
 		--log-cli-level=INFO \
 		$(ARGS)
+
+rock-test:
+	uv run --all-extras pytest tests/rock -v --tb native
 
 clean:
 	rm -rf bin

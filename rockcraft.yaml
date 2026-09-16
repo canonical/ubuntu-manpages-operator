@@ -3,6 +3,7 @@ version: 0.4.0
 license: Apache-2.0
 base: ubuntu@24.04
 build-base: ubuntu@24.04
+run-user: _daemon_
 
 platforms:
   amd64:
@@ -43,3 +44,14 @@ parts:
     stage-packages:
       - ca-certificates
       - mandoc
+
+  user-setup:
+    plugin: nil
+    override-prime: |
+      craftctl default
+      # Shared identity used by Rockcraft and Juju workload containers.
+      MANPAGES_UID=584792
+      MANPAGES_GID=584792
+      mkdir -p app/www/manpages app/www/manpages.gz app/www/sitemaps
+      chown -R ${MANPAGES_UID}:${MANPAGES_GID} app/www
+      chmod -R 750 app/www
