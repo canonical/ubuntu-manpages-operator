@@ -65,7 +65,7 @@ resources:
     description: OCI image for manpages service
     # Published image; source deployments need the rebuilt non-root resource.
     # Override integration tests with --manpages-image when testing the new rock.
-    upstream-source: ghcr.io/canonical/ubuntu-manpages-operator:0.4.0
+    upstream-source: ghcr.io/canonical/ubuntu-manpages-operator:0.5.0
 
 charm-libs:
   - lib: traefik_k8s.ingress

@@ -92,7 +92,6 @@ separate from unit tests and Juju integration tests.
 For Juju integration tests, pass `--manpages-image=<rebuilt-image-reference>` in
 the `make integration` target's `ARGS` after making the rebuilt image available
 to the model. A tag loaded into host Docker alone is not available to Kubernetes.
-The default upstream `0.4.0` image has not been republished with these changes.
 
 ## Charm development (Python)
 
